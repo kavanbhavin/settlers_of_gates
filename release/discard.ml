@@ -36,3 +36,8 @@ let discard_request color plist (b,w,o,g,l) : player list =
       if (c = color) then (c, (new_hand, cards), trophies) else 
         (c, hand, trophies)) plist in 
     plist'
+
+    (* Implements the full functionality of a minimum valid discard. *)
+  let min_valid_discard_full color plist : player list = 
+  (* Call discard_request on bogus input to force min_valid_discard call. *)
+   discard_request color plist (-1,-1,-1,-1,-1)
