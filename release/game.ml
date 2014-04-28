@@ -43,7 +43,8 @@ let handle_move ((map, structs, deck, discard, robber),
   end
   | RobberMove rm -> begin 
     match req with
-    | RobberRequest -> do_robber_move rm board plist
+    | RobberRequest -> let (robber', plist') = do_robber_move turn.active rm board plist
+  in (None, ((map, structs, deck, discard, robber'), plist', turn, (color, req)))
     | _ -> default_move game
   end 
   | DiscardMove (dm) -> begin

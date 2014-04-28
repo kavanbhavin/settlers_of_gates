@@ -2,19 +2,24 @@ open Definition
 open Util
 open Is_valid
 
-let get_colors points (intersections, roads) = 
-	List.fold_left (fun acc point-> match (List.nth point intersections) with 
-		| Some (color, settlement)-> color::acc
-		| None -> acc) [] points
+let list_of_resources (b,w,o,g,l) = [b;w;o;g;l]
+let resources_of_list l = match l with 
+| b::w::o::g::l::[] -> (b,w,o,g,l)
+| _ -> failwith "incorrect type of list in resources_of_list"
 
-let do_robber_move (piece, color) (map, structs, deck, discard, robber) plist =
-(*	
-if (is_valid_piece piece) 
-then let robber' = piece 
-in let available_colors = get_colors (piece_corners piece) structs 
-in if List.mem color available_colors
-then failwith "doesn't do anything"
-else failwith "color not available next to piece"
-else failwith "trying to place robber on invalid piece"
-*)
-failwith "blah"
+let do_robber_move active_player ((piece: piece), color) (map, structs, deck, discard, robber) (plist: player list) : (robber * player list) =
+if (is_valid_piece piece) then let robber' = piece in begin match color with  
+| None -> (robber', plist)
+| Some color_to_rob -> let plist' = List.map (fun (color', (inventory, cards), trophies) ->if color'= color_to_rob
+	then let resources= list_of_resources inventory
+in let indices= randomize [0;1;2;3;4] 
+in let index_to_remove = List.find (fun index -> (List.nth resources index)>0) indices
+in let inventory'=List.mapi (fun index element-> if index=index_to_remove 
+	then element-1 
+else element
+ ) resources
+in (color', ((resources_of_list inventory'), cards), trophies)
+else (color_to_rob, (inventory, cards), trophies)) plist
+in (robber', plist')
+end 
+else failwith "invalid piece"
