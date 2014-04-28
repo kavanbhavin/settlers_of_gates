@@ -27,6 +27,8 @@ let default_move ((map, structs, deck, discard, robber),
 	| DiscardRequest -> 
 		let plist' = min_valid_discard_full color plist in
 			(None, ((map, structs, deck, discard, robber), plist', turn, (color, req)))
+  | RobberRequest -> let (robber', plist') = min_valid_robber turn (map, structs, deck, discard, robber) plist
+  in (None, ((map, structs, deck, discard, robber'), plist', turn, (color, req)))
 	| _ -> failwith "unimplemented"
 
 let handle_move ((map, structs, deck, discard, robber), 
