@@ -1,19 +1,17 @@
 open Util
 open Definition
 open Constant
+open Own_util
 
 (* Given the number of cards we need to discard
    and the player's hand, return a minimum valid discard move *)
-let min_valid_discard num (b,w,o,g,l) = 
-  let temp_l = [b;w;o;g;l] in
+let min_valid_discard num inventory = 
   let ls = snd (List.fold_right (fun v (sum, acc) -> 
     if sum = num then (sum, 0::acc) else
     if (v + sum) <= num then ((v + sum), v::acc) else
       let num_discard = num - sum in 
-      (num, num_discard::acc)) temp_l (0, [])) in 
-  match ls with
-  | b::w::o::g::l::[] -> (b, w, o, g, l)
-  | _ -> failwith "Min Valid Discard fold failed!"
+      (num, num_discard::acc)) (list_of_resources inventory) (0, [])) in 
+  resources_of_list ls
 
   (* Handles a discard request. Returns modified list of players. *)
 let discard_request color plist (b,w,o,g,l) : player list = 
