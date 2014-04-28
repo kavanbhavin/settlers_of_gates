@@ -1,11 +1,8 @@
 open Definition
 open Util
 open Is_valid
+open Own_util
 
-let list_of_resources (b,w,o,g,l) = [b;w;o;g;l]
-let resources_of_list l = match l with 
-| b::w::o::g::l::[] -> (b,w,o,g,l)
-| _ -> failwith "incorrect type of list in resources_of_list"
 
 let find_random_piece () = Random.int 19
 let rec min_valid_robber turn board plist = do_robber_move turn.active (find_random_piece (), None) board plist 
