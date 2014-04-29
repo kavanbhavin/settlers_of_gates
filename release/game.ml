@@ -8,6 +8,7 @@ open Robber
 open Init_move
 open Discard
 open Trade
+open Roll_dice
 
 type game = state
 
@@ -74,6 +75,8 @@ let handle_move ((map, structs, deck, discard, robber),
     	match req with
     	| ActionRequest -> begin
     		match act with
+        | RollDice -> let plist' = roll_dice plist board
+      in (None, (board, plist', turn, (color, req)))
     		| DomesticTrade tr ->
     			if not (valid_trade tr color plist) || turn.tradesmade >= cNUM_TRADES_PER_TURN 
     				then default_move game else
