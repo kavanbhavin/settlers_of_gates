@@ -6,7 +6,7 @@ open Own_util
 type robber_failure = Do_Nothing | Move_Robber
 
 let find_random_piece () = Random.int 19
-let rec min_valid_robber turn board plist = do_robber_move turn.active (find_random_piece (), None) board plist 
+let rec min_valid_robber active_player board plist = do_robber_move active_player (find_random_piece (), None) board plist 
 and do_robber_move active_player ((piece: piece), color) (map, structs, deck, discard, robber) (plist: player list) (failure: robber_failure) : (robber * player list) =
 	let index_to_remove = ref (-1)
 in if (is_valid_piece piece) then let robber' = piece in begin match color with  
@@ -27,6 +27,6 @@ in (robber', (List.map (fun (color, (inventory, cards), trophies)-> if color = a
 	in (color, (inventory', cards), trophies) else (color, (inventory, cards), trophies) ) plist'))
 end 
 else begin match failure with 
-| Do_Nothing -> failwith "kdsjfh"
-| Move_Robber -> failwith "askdjfh"
+| Do_Nothing -> (robber, plist)
+| Move_Robber -> min_valid_robber active_player (map, structs, deck, discard, robber) plist Do_Nothing
 end 

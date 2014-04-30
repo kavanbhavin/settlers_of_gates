@@ -23,7 +23,7 @@ let default_move ((map, structs, deck, discard, robber),
 		let (next', plist') = min_valid_discard_full color plist turn.active in
 			(None, ((map, structs, deck, discard, robber), plist', turn, next'))
     | RobberRequest -> 
-  		let (robber', plist') = min_valid_robber turn (map, structs, deck, discard, robber) plist Move_Robber in
+  		let (robber', plist') = min_valid_robber turn.active (map, structs, deck, discard, robber) plist Move_Robber in
   			(None, ((map, structs, deck, discard, robber'), plist', turn, (color, req)))
     | TradeRequest -> 
     	(None, ((map, structs, deck, discard, robber), plist, turn, (color, req)))
