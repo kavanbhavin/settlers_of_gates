@@ -10,6 +10,7 @@ open Discard
 open Trade
 open Roll_dice
 open Play_card
+open Default_moves
 
 type game = state
 
@@ -18,24 +19,6 @@ let game_of_state s = s
 
 
 let init_game () = game_of_state (gen_initial_state())
-
-(* Applies the default move for req, and returns the new game state
-	after doing this. *)
-let default_move ((map, structs, deck, discard, robber), 
-    plist, turn, (color, req)) = 
-	match req with
-	| InitialRequest -> 
-		let structs' = min_valid_init (map, structs, deck, discard, robber) color in
-			(None, ((map, structs', deck, discard, robber), plist, turn, (color, req)))
-	| DiscardRequest -> 
-		let (next', plist') = min_valid_discard_full color plist turn.active in
-			(None, ((map, structs, deck, discard, robber), plist', turn, next'))
-    | RobberRequest -> 
-  		let (robber', plist') = min_valid_robber turn (map, structs, deck, discard, robber) plist Move_Robber in
-  			(None, ((map, structs, deck, discard, robber'), plist', turn, (color, req)))
-    | TradeRequest -> 
-    	(None, ((map, structs, deck, discard, robber), plist, turn, (color, req)))
-	| _ -> failwith "unimplemented"
 
 let handle_move ((map, structs, deck, discard, robber), 
     plist, turn, (color, req)) m =
