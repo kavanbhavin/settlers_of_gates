@@ -24,13 +24,15 @@ let build_road (inters, rlist) line color : structures =
   else 
     (inters, ((color, line)::rlist))
 
- (* Checks if we can build a road (enough resources and its free. *)
+ (* Checks if we can build a road (enough resources and its free / in range. *)
  let can_build_road (inters, rlist) line col plist = 
  	let (b,w,o,g,l) = get_res col plist in
  	let (bn, wn, on, gn, ln) = cCOST_ROAD in 
 	let enough_res = b >= bn && w >= wn && o >= on && g >= gn && l >= ln in
 	let is_free = empty_road line rlist in 
-	enough_res && is_free
+	let in_range = road_in_range col (inters, rlist) line in
+	let not_too_many = (get_num_roads col rlist) < cMAX_ROADS_PER_PLAYER in 
+	enough_res && is_free && in_range && not_too_many
 
 (* Goes through the process of building a road, returning the (structs, plist) pair
 	where structs is the updated structures and plist is the player list
@@ -48,7 +50,9 @@ let can_build_town (inters, rlist) point col plist =
 	let (bn, wn, on, gn, ln) = cCOST_TOWN in
 	let enough_res = b >= bn && w >= wn && o >= on && g >= gn && l >= ln in
 	let is_free = empty_settlement point inters in
-	enough_res && is_free
+	let in_range = settle_in_range col (inters, rlist) point in
+	let not_too_many = (get_num_settles col inters Town) < cMAX_TOWNS_PER_PLAYER in
+	enough_res && is_free && in_range && not_too_many
 
 (* Goes through the process of building a town, returning the (structs, plist) pair
 	where structs is the updated structures and plist is the player list
@@ -70,7 +74,8 @@ let can_build_city (inters, rlist) point col plist =
 	let we_own = (match settle_info with
 		| None -> false
 		| Some (color, typ) -> (typ = Town) && (col = color)) in
-	enough_res && we_own
+	let not_too_many = (get_num_settles col inters City) < cMAX_CITIES_PER_PLAYER in
+	enough_res && we_own && not_too_many
 
 (* Goes through the process of building a city, returning the (structs, plist) pair
 	where structs is the updated structures and plist is the player list
@@ -108,26 +113,26 @@ let doBuild ((map, structs, deck, discard, robber),
     plist, turn, (color, req)) build = 
 let board = (map, structs, deck, discard, robber) in 
   match build with
-            | BuildRoad (col, line) -> 
-              if (can_build_road structs line color plist) then
-                let (structs', plist') = build_road_move structs line color plist in
-                Some (None, ((map, structs', deck, discard, robber), plist', turn, (color, req)))
-              else None
-            | BuildTown point ->
-              if (can_build_town structs point color plist) then
-                let (structs',plist') = build_town_move structs point color plist in
-                Some (None, ((map, structs', deck, discard, robber), plist', turn, (color, req)))
-              else None 
-            | BuildCity point -> 
-              if (can_build_city structs point color plist) then
-                let (structs',plist') = build_city_move structs point color plist in
-                Some (None, ((map, structs', deck, discard, robber), plist', turn, (color, req)))
-              else None
-            | BuildCard -> 
-              if (can_build_card color plist) then
-                let (turn', plist') = build_card_move color plist turn in
-                Some (None, (board, plist', turn', (color, req)))
-              else None
+    | BuildRoad (col, line) -> 
+      if (can_build_road structs line color plist) then
+        let (structs', plist') = build_road_move structs line color plist in
+        Some (None, ((map, structs', deck, discard, robber), plist', turn, (color, req)))
+      else None
+    | BuildTown point ->
+      if (can_build_town structs point color plist) then
+        let (structs',plist') = build_town_move structs point color plist in
+        Some (None, ((map, structs', deck, discard, robber), plist', turn, (color, req)))
+      else None 
+    | BuildCity point -> 
+      if (can_build_city structs point color plist) then
+        let (structs',plist') = build_city_move structs point color plist in
+        Some (None, ((map, structs', deck, discard, robber), plist', turn, (color, req)))
+      else None
+    | BuildCard -> 
+      if (can_build_card color plist) then
+        let (turn', plist') = build_card_move color plist turn in
+        Some (None, (board, plist', turn', (color, req)))
+      else None
 
 
 

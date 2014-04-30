@@ -1,5 +1,7 @@
 open Util
 open Definition
+open Own_util
+open Constant
 
 (* If p1 and p2 are adjacent. *)
 let valid_pair (p1, p2) : bool = 
@@ -43,5 +45,52 @@ let get_valid_road settle structs color: road option =
   try Some (color, (List.find (fun (start_loc, end_loc) -> 
      free_valid_pair (start_loc, end_loc) structs) poss_roads)) with
       Not_found -> None
+
+(* Returns "player col owns a road with one point
+    on point." *)
+let own_road_with_point point col roads : bool = 
+  List.fold_left (fun acc (r_c, (r_s, r_e)) -> 
+    acc || ((r_s = point || r_e = point) && r_c = col)) false roads
+
+(* Returns "player col owns a settlement on point.
+  Precondition: Point is valid." *)
+let own_settle_with_point point col inters : bool = 
+  if not (valid_settle point) then false else
+  match (List.nth inters point) with
+    | None -> false
+    | Some (settle_col, _) -> (col = settle_col)
+
+(* Returns true if road is adjacent to a road or settlement owned by color. *)
+let road_in_range col (inters, roads) (start_loc, end_loc) = 
+    let near_start = adjacent_points start_loc and
+        near_end   = adjacent_points end_loc in
+    let near_road = near_start@near_end in
+    let own_adj_road = List.fold_left (fun acc point ->
+      acc || (own_road_with_point point col roads)) false near_road in
+    let own_adj_settle = List.fold_left (fun acc point ->
+      acc || (own_settle_with_point point col inters)) false near_road in
+    own_adj_road || own_adj_settle
+
+(* Returns true if the road is a adjacent to a road owned by color,
+  and is far enough away from existing settlements to be built. *)
+let settle_in_range col (inters, roads) settle : bool = 
+  let neighbors = adjacent_points settle in
+  let own_adj_road = List.fold_left (fun acc point ->
+    acc || (own_road_with_point point col roads)) false neighbors in
+  let too_close = settle_one_away settle inters in
+  own_adj_road && (not too_close)
+
+(* Returns true if r1 is free and can be built by col.
+  Assumes that building a road requires no resources. *)
+let can_build_road_free r1 col (inters, roads) = 
+  let is_free = empty_road r1 roads in 
+  let in_range = road_in_range col (inters, roads) r1 in
+  let not_too_many = (get_num_roads col roads) < cMAX_ROADS_PER_PLAYER in 
+  is_free && in_range && not_too_many
+
+(* Returns true if r1 is free and can be built by col,
+  and if r2 is either None or can also be built. *)
+let can_build_roads_free r1 r2 col structs plist = 
+    failwith "unimplemented"
 
 

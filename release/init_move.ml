@@ -3,6 +3,7 @@ open Definition
 open Is_valid
 open Build
 open Constant
+open Own_util
 (* Makes a minimum valid move.
    This is to be called in the case of 
    a bot giving us an invalid move. *)
@@ -12,7 +13,8 @@ let min_valid_init (map, structs, deck, discard, robber) color=
     (* Returns the first intersection that has an empty road
       adjacent to it. *)
     let (inter, i) = try (List.find (fun (inter, i) -> begin match inter with
-    | None -> begin match (get_valid_road i structs color) with
+    | None -> if (settle_one_away i inters) then false else
+      begin match (get_valid_road i structs color) with
       | Some _ -> true
       | None -> false end
     | Some _ -> false
@@ -30,7 +32,8 @@ let min_valid_init (map, structs, deck, discard, robber) color=
 
 (* Handles an initial move request. *)
 let init_request ((map, structs, deck, discard, robber) : board) (p1, p2) color : structures = 
-  if (free_valid_pair (p1, p2) structs) then
+  let (inters, roads) = structs in
+  if (free_valid_pair (p1, p2) structs) && not (settle_one_away p1 inters) then
     let structs' = build_settlement structs p1 color Town in 
     build_road structs' (p1, p2) color
   else min_valid_init (map, structs, deck, discard, robber) color

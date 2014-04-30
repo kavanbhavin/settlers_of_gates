@@ -1,4 +1,5 @@
 open Definition
+open Util
 (* returns hex index based on roll.*)
 
 let piece_of_roll roll = match roll with 
@@ -57,3 +58,27 @@ let get_settle point inters : intersection =
  let get_res col plist = 
  	let (_, (res, _), _) = get_player col plist in
  	res
+
+  (* Returns true if there exists a settlement
+    < 2 road lengths away from point. *)
+  let settle_one_away point inters : bool = 
+    let neighbors = adjacent_points point in
+    List.fold_left (fun acc v ->
+      acc || (match (List.nth inters v) with
+        | None -> false
+        | Some _ -> true)) false neighbors
+
+  (* Returns the number of settlements of type typ
+    owned by player col. *)
+  let get_num_settles col settles typ : int = 
+    List.fold_left (fun acc v ->
+      match v with
+      | None -> acc
+      | Some (settle_col, settle_type) ->
+        if ((col = settle_col) && (typ = settle_type)) then
+          acc+1 else acc) 0 settles
+
+  (* Returns the number of roads owned by player col. *)
+  let get_num_roads col roads : int =
+    List.fold_left (fun acc (road_col, _) ->
+    if (road_col = col) then acc + 1 else acc) 0 roads
