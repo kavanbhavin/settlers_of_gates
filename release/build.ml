@@ -1,6 +1,7 @@
 open Definition
 open Is_valid
 open Constant
+open Own_util
 
 (* BUILD STUFF *)
 
@@ -11,21 +12,17 @@ let build_settlement (inters, rlist) p1 color settle_type : structures =
     ((List.mapi (fun i el -> if (i = p1) then 
         Some (color, settle_type) else el) inters), rlist)
 
+(* Upgrades a town to a city. Precondition: 
+ 	There is a town at loc, which is a valid index. *)
+ let upgrade_town (inters, rlist) loc color : structures = 
+ 	((List.mapi (fun i el -> if (i = loc) then 
+        Some (color, City) else el) inters), rlist)
+
 let build_road (inters, rlist) line color : structures = 
   if (not (empty_road line rlist)) then 
     failwith "Trying to override road"
   else 
     (inters, ((color, line)::rlist))
-
- (* Given a player's color, return their resources. *)
- let get_res col plist = 
- 	let (_, (res, _), _) = get_player col plist in
- 	res
-
- (* Uses up a certain amount of each resource. *)
- let shrink_res a b = 
- 	let (b,w,o,g,l) = a and (x,x1,x2,x3,x4) = b in
- 	(b-x, w-x1, o- x2, g - x3, l - x4)
 
  (* Checks if we can build a road (enough resources and its free. *)
  let can_build_road (inters, rlist) line col plist = 
@@ -44,3 +41,94 @@ let build_road_move (inters, rlist) line color plist =
 		else (col, (res, hand), troph)) plist in
 	let structs' = build_road (inters, rlist) line color in
 	(structs', plist')
+
+(* Checks if we can build a town (enough resources and its free. *)
+let can_build_town (inters, rlist) point col plist = 
+	let (b,w,o,g,l) = get_res col plist in
+	let (bn, wn, on, gn, ln) = cCOST_TOWN in
+	let enough_res = b >= bn && w >= wn && o >= on && g >= gn && l >= ln in
+	let is_free = empty_settlement point inters in
+	enough_res && is_free
+
+(* Goes through the process of building a town, returning the (structs, plist) pair
+	where structs is the updated structures and plist is the player list
+	with resources updated for the proper player. Precondition: Player can afford town. *)
+let build_town_move (inters, rlist) point color plist = 
+	let plist' = List.map (fun (col, (res, hand), troph) ->
+		if (col = color) then (col, ((shrink_res res cCOST_TOWN), hand), troph)
+		else (col, (res, hand), troph)) plist in
+	let structs' = build_settlement (inters ,rlist) point color Town in
+	(structs', plist')
+
+
+(* Checks if we can build a city (enough resources and we own a town here). *)
+let can_build_city (inters, rlist) point col plist = 
+	let (b,w,o,g,l) = get_res col plist in
+	let (bn, wn, on, gn, ln) = cCOST_CITY in
+	let enough_res = b >= bn && w >= wn && o >= on && g >= gn && l >= ln in
+	let settle_info = get_settle point inters in
+	let we_own = (match settle_info with
+		| None -> false
+		| Some (color, typ) -> (typ = Town) && (col = color)) in
+	enough_res && we_own
+
+(* Goes through the process of building a city, returning the (structs, plist) pair
+	where structs is the updated structures and plist is the player list
+	with resources updated for the proper player. Precondition: Player owns town / can afford upgrade. *)
+let build_city_move (inters, rlist) point color plist = 
+	let plist' = List.map (fun (col, (res, hand), troph) ->
+		if (col = color) then (col, ((shrink_res res cCOST_CITY), hand), troph)
+		else (col, (res, hand), troph)) plist in
+	let structs' = upgrade_town (inters ,rlist) point color in
+	(structs', plist')
+
+
+(* Checks if we can build a card (if we have enough resources) *)
+let can_build_card col plist = 
+	let (b,w,o,g,l) = get_res col plist in
+	let (bn, wn, on, gn, ln) = cCOST_CARD in
+	let enough_res = b >= bn && w >= wn && o >= on && g >= gn && l >= ln in
+	enough_res
+
+(* Goes through the process of building a card, returning the new player list
+	with a card in exchange for lost resource. Precondition: Player can afford card.*)
+let build_card_move color plist turn : (turn * player list)= 
+	let card = ran_card () in
+	let cardsbought' = Reveal (match turn.cardsbought with
+		| Hidden _ -> failwith "Player with hidden hand buying cards!"
+		| Reveal l -> card::l) in 
+	let turn' = {active=turn.active; dicerolled=turn.dicerolled;cardplayed=turn.cardplayed;
+		cardsbought = cardsbought'; tradesmade=turn.tradesmade;pendingtrade=turn.pendingtrade} in
+	let plist' = List.map (fun (col, (res, hand), troph) ->
+		if (col = color) then (col, ((shrink_res res cCOST_CARD), hand), troph)
+		else (col, (res, hand), troph)) plist in
+	(turn', plist')	
+
+let doBuild ((map, structs, deck, discard, robber), 
+    plist, turn, (color, req)) build = 
+let board = (map, structs, deck, discard, robber) in 
+  match build with
+            | BuildRoad (col, line) -> 
+              if (can_build_road structs line color plist) then
+                let (structs', plist') = build_road_move structs line color plist in
+                Some (None, ((map, structs', deck, discard, robber), plist', turn, (color, req)))
+              else None
+            | BuildTown point ->
+              if (can_build_town structs point color plist) then
+                let (structs',plist') = build_town_move structs point color plist in
+                Some (None, ((map, structs', deck, discard, robber), plist', turn, (color, req)))
+              else None 
+            | BuildCity point -> 
+              if (can_build_city structs point color plist) then
+                let (structs',plist') = build_city_move structs point color plist in
+                Some (None, ((map, structs', deck, discard, robber), plist', turn, (color, req)))
+              else None
+            | BuildCard -> 
+              if (can_build_card color plist) then
+                let (turn', plist') = build_card_move color plist turn in
+                Some (None, (board, plist', turn', (color, req)))
+              else None
+
+
+
+

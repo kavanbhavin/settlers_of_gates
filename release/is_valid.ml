@@ -6,12 +6,19 @@ let valid_pair (p1, p2) : bool =
   p1 >= 0 && p2 >= 0 && p1 <= 53 && p2 <= 53 && 
   List.mem p2 (adjacent_points p1)
 
+(* Is this settlement within the necessary bounds? *)
+let valid_settle point = 
+  point >= 0 && point <= 53  
+
+
 let empty_road (p1, p2) roads : bool = 
+  if (not (valid_pair (p1, p2))) then false else
   not (List.exists (fun (_, line) ->
     (line = (p1, p2) || line = (p2, p1))) roads)
 
 (* PRECONDITION: p1 is a valid indices. *)
 let empty_settlement p1 intersections : bool =
+  if (not (valid_settle p1)) then false else
   match (List.nth intersections p1) with
   | Some _ -> false 
   | None -> true
@@ -37,9 +44,4 @@ let get_valid_road settle structs color: road option =
      free_valid_pair (start_loc, end_loc) structs) poss_roads)) with
       Not_found -> None
 
-(* Returns a certain player from a player list.
-  THIS FUNCTION FAILS IF THE PLAYER ISN'T IN THE LIST. *)
-let get_player color plist =
-  try List.find (fun (c, _, _) -> c = color) plist with
-    Not_found -> failwith "get_player : Player not found!"
-  
+

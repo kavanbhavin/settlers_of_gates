@@ -2,6 +2,8 @@ open Util
 open Definition
 open Constant
 open Own_util
+(*make sure the person has enough cards before discard*)
+
 
 (* Given the number of cards we need to discard
    and the player's hand, return a minimum valid discard move *)
@@ -14,7 +16,7 @@ let min_valid_discard num inventory =
   resources_of_list ls
 
   (* Handles a discard request. Returns modified list of players. *)
-let discard_request color plist (b,w,o,g,l) : player list = 
+let discard_request color plist (b,w,o,g,l) active_player : (next * player list) = 
   let (color, ((bh, wh, oh, gh, lh), cards), trophies) = try List.find (fun (c, _, _) ->
     (c = color)) plist with Not_found ->
     failwith "Discard Request: Player doesn't exist!" in
@@ -33,9 +35,10 @@ let discard_request color plist (b,w,o,g,l) : player list =
     let plist' = List.map (fun (c, hand, trophies) ->
       if (c = color) then (c, (new_hand, cards), trophies) else 
         (c, hand, trophies)) plist in 
-    plist'
+    if active_player= color then ((active_player, RobberRequest), plist')
+  else ((next_turn color, DiscardRequest), plist')
 
     (* Implements the full functionality of a minimum valid discard. *)
-  let min_valid_discard_full color plist : player list = 
+  let min_valid_discard_full color plist active_player : (next * player list) = 
   (* Call discard_request on bogus input to force min_valid_discard call. *)
-   discard_request color plist (-1,-1,-1,-1,-1)
+   discard_request color plist (-1,-1,-1,-1,-1) active_player

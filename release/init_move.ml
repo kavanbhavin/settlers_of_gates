@@ -2,7 +2,7 @@ open Util
 open Definition 
 open Is_valid
 open Build
-
+open Constant
 (* Makes a minimum valid move.
    This is to be called in the case of 
    a bot giving us an invalid move. *)
@@ -34,3 +34,12 @@ let init_request ((map, structs, deck, discard, robber) : board) (p1, p2) color 
     let structs' = build_settlement structs p1 color Town in 
     build_road structs' (p1, p2) color
   else min_valid_init (map, structs, deck, discard, robber) color
+
+let update_init_turn num_roads color= 
+      if num_roads < cNUM_PLAYERS 
+      then ((next_turn color), InitialRequest) else 
+      if num_roads = cNUM_PLAYERS
+      then (color, InitialRequest) else 
+      if num_roads < (2*cNUM_PLAYERS)
+      then ((prev_turn color), InitialRequest)
+    else (color, ActionRequest) 

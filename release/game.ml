@@ -9,6 +9,7 @@ open Init_move
 open Discard
 open Trade
 open Roll_dice
+open Play_card
 
 type game = state
 
@@ -27,10 +28,10 @@ let default_move ((map, structs, deck, discard, robber),
 		let structs' = min_valid_init (map, structs, deck, discard, robber) color in
 			(None, ((map, structs', deck, discard, robber), plist, turn, (color, req)))
 	| DiscardRequest -> 
-		let plist' = min_valid_discard_full color plist in
-			(None, ((map, structs, deck, discard, robber), plist', turn, (color, req)))
+		let (next', plist') = min_valid_discard_full color plist turn.active in
+			(None, ((map, structs, deck, discard, robber), plist', turn, next'))
     | RobberRequest -> 
-  		let (robber', plist') = min_valid_robber turn (map, structs, deck, discard, robber) plist in
+  		let (robber', plist') = min_valid_robber turn (map, structs, deck, discard, robber) plist Move_Robber in
   			(None, ((map, structs, deck, discard, robber'), plist', turn, (color, req)))
     | TradeRequest -> 
     	(None, ((map, structs, deck, discard, robber), plist, turn, (color, req)))
@@ -44,26 +45,28 @@ let handle_move ((map, structs, deck, discard, robber),
   | InitialMove l -> begin
     match req with
     | InitialRequest ->
-      let structs' = (init_request board l color) in 
-      (None, ((map, structs', deck, discard, robber), plist, turn, (color, req)))
+      let (intersections', roads') = (init_request board l color) in 
+      let (color', req') = update_init_turn (List.length roads') color 
+  in (None, ((map, (intersections', roads'), deck, discard, robber), plist, (new_turn color'), (color', req')))
     | _ -> default_move game
   end
   | RobberMove rm -> begin 
     match req with
     | RobberRequest -> 
-    	let (robber', plist') = do_robber_move turn.active rm board plist in
-  		(None, ((map, structs, deck, discard, robber'), plist', turn, (color, req)))
+    	let (robber', plist') = do_robber_move turn.active rm board plist Move_Robber in
+  		(None, ((map, structs, deck, discard, robber'), plist', turn, (color, ActionRequest)))
     | _ -> default_move game
   end 
   | DiscardMove (dm) -> begin
   	match req with
   	| DiscardRequest ->
-  		let plist'= discard_request color plist dm in 
-  		(None, (board, plist', turn, (color, req)))
+  		let (next', plist')= discard_request color plist dm turn.active in 
+  		(None, (board, plist', turn, (next')))
   	| _ -> default_move game
   end
     | TradeResponse res -> begin
     	match req with
+      (* fix color changing*)
     	| TradeRequest ->
 	    	let (origin, trade) = get_trade_info turn in
 	    	let plist' = handle_trade res origin trade plist in
@@ -75,22 +78,23 @@ let handle_move ((map, structs, deck, discard, robber),
     	match req with
     	| ActionRequest -> begin
     		match act with
-        | RollDice -> let plist' = roll_dice plist board
-      in (None, (board, plist', turn, (color, req)))
+        | RollDice -> let (next', plist') = roll_dice plist board color
+      in (None, (board, plist', turn, next'))
     		| DomesticTrade tr ->
     			if not (valid_trade tr color plist) || turn.tradesmade >= cNUM_TRADES_PER_TURN 
     				then default_move game else
     			let (turn', next') = update_turn_before_trade turn (color,req) tr color plist in
     			(None, (board, plist, turn', next'))
     		| BuyBuild build -> 
-    			begin match build with
-    				| BuildRoad (col, line) -> 
-    					if (can_build_road structs line color plist) then
-    					let (structs', plist') = build_road_move structs line color plist in
-    						(None, ((map, structs', deck, discard, robber), plist', turn, (color, req)))
-    					else default_move game
-    				| _ -> failwith "not implemented"
-    			end
+    			 begin match (doBuild game build) with 
+           | Some (x) -> x
+           | None -> default_move game 
+         end 
+        | PlayCard card ->
+          begin match doPlay game card with 
+           | Some x -> x
+           | None -> default_move game 
+          end
     		| _ -> failwith "unimplemented"
     		end
     	| _ -> default_move game
