@@ -36,7 +36,7 @@ let handle_move ((map, structs, deck, discard, robber),
   | RobberMove rm -> begin 
     match req with
     | RobberRequest -> 
-    	let (robber', plist') = do_robber_move turn.active rm board plist Move_Robber in
+    	let (robber', plist') = do_robber_move turn.active rm structs robber plist Move_Robber in
   		(None, ((map, structs, deck, discard, robber'), plist', turn, (color, ActionRequest)))
     | _ -> default_move game
   end 
