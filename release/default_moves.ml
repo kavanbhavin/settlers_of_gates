@@ -23,8 +23,11 @@ let default_move ((map, structs, deck, discard, robber),
 		let (next', plist') = min_valid_discard_full color plist turn.active in
 			(None, ((map, structs, deck, discard, robber), plist', turn, next'))
     | RobberRequest -> 
-  		let (robber', plist') = min_valid_robber turn.active structs robber plist Move_Robber in
-  			(None, ((map, structs, deck, discard, robber'), plist', turn, (color, req)))
+  		begin match (min_valid_robber turn.active structs robber plist) with 
+  				| Some (robber', plist') -> 
+  				(None, ((map, structs, deck, discard, robber'), plist', turn, (color, req)))
+  				| None -> failwith "robber failed on min_valid_robber"
+  		end 
     | TradeRequest -> 
     	(None, ((map, structs, deck, discard, robber), plist, turn, (color, req)))
 	| _ -> failwith "unimplemented"
