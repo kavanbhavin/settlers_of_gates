@@ -52,6 +52,7 @@ let do_robber_move (active_player: color) ((piece: piece), color) (structs: stru
 		with _ -> None 
 	else None
 
+
 let min_valid_robber active_player (intersections, roads) robber plist = 
 let new_location = get_new_piece robber 
 in let corners_of_random_piece = piece_corners new_location
