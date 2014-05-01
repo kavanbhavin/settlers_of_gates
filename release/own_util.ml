@@ -82,3 +82,28 @@ let get_settle point inters : intersection =
   let get_num_roads col roads : int =
     List.fold_left (fun acc (road_col, _) ->
     if (road_col = col) then acc + 1 else acc) 0 roads
+
+  let road_to_line_option r = 
+    match r with
+      | None -> None
+      | Some (col, line) -> Some line
+
+   (* Takes a resource hand and a desired res,
+      removes all of that resource from the hand,
+      returns the new hand and the # resources removed. *)
+  let deplete_res (b,w,o,g,l) res = 
+    match res with
+    | Brick -> ((0, w, o, g, l), b)
+    | Wool -> ((b, 0, o, g, l), w)
+    | Ore ->  ((b, w, 0, g, l), o)
+    | Grain -> ((b, w, o, 0, l), g)
+    | Lumber -> ((b, w, o, g, 0), l)
+
+  (* Gives num of res to the hand, returning new hand. *)
+  let give_res (b,w,o,g,l) res num = 
+    match res with
+      | Brick -> ((b+num, w, o, g, l))
+      | Wool -> ((b, w+num, o, g, l))
+      | Ore ->  ((b, w, o+num, g, l))
+      | Grain -> ((b, w, o, g+num, l))
+      | Lumber -> ((b, w, o, g, l+num))

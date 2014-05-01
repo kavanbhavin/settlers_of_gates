@@ -54,7 +54,7 @@ let handle_move ((map, structs, deck, discard, robber),
 	    	let (origin, trade) = get_trade_info turn in
 	    	let plist' = handle_trade res origin trade plist in
 	    	let turn' = update_turn_after_trade turn in
-	    	(None, (board, plist',turn',(color,req)))
+	    	(None, (board, plist',turn',(origin, ActionRequest)))
 	    | _ -> default_move game
     end
     | Action act -> begin
@@ -62,14 +62,14 @@ let handle_move ((map, structs, deck, discard, robber),
     	| ActionRequest -> begin
     		match act with
         | RollDice -> let (next', plist') = roll_dice plist board color
-      in (None, (board, plist', turn, next'))
-    		| DomesticTrade tr ->
-    			if not (valid_trade tr color plist) || turn.tradesmade >= cNUM_TRADES_PER_TURN 
-    				then default_move game else
-    			let (turn', next') = update_turn_before_trade turn (color,req) tr color plist in
-    			(None, (board, plist, turn', next'))
-    		| BuyBuild build -> 
-    			 begin match (doBuild game build) with 
+      		in (None, (board, plist', turn, next'))
+		| DomesticTrade tr ->
+			if not (valid_trade tr color plist) || turn.tradesmade >= cNUM_TRADES_PER_TURN 
+				then default_move game else
+			let (turn', next') = update_turn_before_trade turn (color,req) tr color plist in
+			(None, (board, plist, turn', next'))
+		| BuyBuild build -> 
+			 begin match (doBuild game build) with 
            | Some (x) -> x
            | None -> default_move game 
          end 

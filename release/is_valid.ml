@@ -90,7 +90,9 @@ let can_build_road_free r1 col (inters, roads) =
 
 (* Returns true if r1 is free and can be built by col,
   and if r2 is either None or can also be built. *)
-let can_build_roads_free r1 r2 col structs plist = 
-    failwith "unimplemented"
-
+let can_build_roads_free r1 r2_o col structs = 
+    (can_build_road_free r1 col structs) &&
+      (match r2_o with
+        | None -> true
+        | Some r2 -> (can_build_road_free r2 col structs))
 

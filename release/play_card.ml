@@ -2,6 +2,8 @@ open Is_valid
 open Definition
 open Own_util
 open Robber
+open Build
+open Util
 
 (* If player color has card, remove one copy of it
 	and return the new player list, otherwise None. *)
@@ -30,14 +32,55 @@ let play_knight plist color turn rob_move robber structs=
 		| None -> None
 		| Some plist' -> Some (
 			let turn' =  play_card turn in
-			let (robber', plist') = do_robber_move color rob_move structs robber plist Do_Nothing in
+			let (robber', plist') = do_robber_move color rob_move structs robber plist' Do_Nothing in
 			(robber', turn', plist')
 			)
 
-let play_road_build plist color turn = 
+let play_road_build plist color turn r1 r2_o structs = 
 	match (get_card plist color RoadBuilding) with
 		| None -> None
-		| Some plist' -> failwith "hi"
+		| Some plist' -> 
+			if (can_build_roads_free r1 r2_o color structs) then
+				let structs' = build_road structs r1 color in
+				let structs' = (match r2_o with
+					| None -> structs'
+					| Some r2 -> build_road structs' r2 color) in
+				let turn' = play_card turn in
+				Some (structs', turn', plist')
+			else None
+
+let play_year_of_plenty plist color turn r1 r2_o = 
+	match (get_card plist color YearOfPlenty) with
+		| None -> None
+		| Some plist' ->
+			let plist' = List.map (fun (cur_col, (cur_inv, cur_cards), cur_trophs) ->
+			if (cur_col <> color) then (cur_col, (cur_inv, cur_cards), cur_trophs) else
+			let cost' = single_resource_cost r1 in 
+			let cost' = match r2_o with
+				| None -> cost'
+				| Some r2 -> sum_of_two_costs (single_resource_cost r2) cost' in
+			let cur_inv' = sum_of_two_costs cur_inv cost' in
+			(cur_col, (cur_inv', cur_cards), cur_trophs)) plist' in
+			let turn' = play_card turn in
+			Some (plist', turn')
+
+let play_monopoly plist color turn res = 
+	match (get_card plist color Monopoly) with
+		| None -> None
+		| Some plist' ->
+			let num_found = ref 0 in
+			let plist' = List.map (fun (cur_col, (cur_inv, cur_cards), cur_trophs) ->
+				if (cur_col = color) then (cur_col, (cur_inv, cur_cards), cur_trophs) else
+				let (cur_inv', dfound) = deplete_res cur_inv res in
+				num_found := (!num_found + dfound);
+				(cur_col, (cur_inv', cur_cards), cur_trophs)
+				)	 plist' in 
+			let plist' = List.map (fun (cur_col, (cur_inv, cur_cards), cur_trophs) ->
+				if (cur_col <> color) then (cur_col, (cur_inv, cur_cards), cur_trophs) else
+				let cur_inv' = give_res cur_inv res !num_found in
+				(cur_col, (cur_inv', cur_cards), cur_trophs)) plist' in
+			let turn' = play_card turn in
+			Some (plist', turn')
 			
 
 let doPlay ((map, structs, deck, discard, robber), 
@@ -50,6 +93,21 @@ let doPlay ((map, structs, deck, discard, robber),
         | Some (robber', turn', plist') ->
           Some (None, ((map, structs, deck, discard, robber'), plist', turn', (color,req)))
       end
-    | PlayRoadBuilding (r1, r2) ->
-      failwith "hi"
-    | _ -> failwith "unimplemented"
+    | PlayRoadBuilding ((_, r1), r2') ->
+      begin match (play_road_build plist color turn r1 (road_to_line_option r2') structs) with
+    	| None -> None
+    	| Some (structs', turn', plist') ->
+    	  Some (None, ((map, structs', deck, discard, robber), plist', turn', (color,req)))
+      end 
+    | PlayYearOfPlenty (r1, r2_o) ->
+      begin match (play_year_of_plenty plist color turn r1 r2_o) with
+    	| None -> None
+    	| Some (plist', turn') ->
+    		Some (None, ((map, structs, deck, discard, robber), plist', turn', (color,req)))
+      end
+    | PlayMonopoly res ->
+      begin match (play_monopoly plist color turn res) with
+      	| None -> None
+      	| Some (plist', turn') ->
+      		Some (None, ((map, structs, deck, discard, robber), plist', turn', (color,req)))
+      end
