@@ -67,8 +67,8 @@ let handle_move ((map, structs, deck, discard, robber),
     	match req with
     	| ActionRequest -> begin
     		match act with
-        | RollDice -> let (next', plist') = roll_dice plist board color
-      		in (None, (board, plist', turn, next'))
+        | RollDice -> let (next', plist', turn') = roll_dice plist board color turn
+      		in (None, (board, plist', turn', next'))
 		| DomesticTrade tr ->
 			if not (valid_trade tr color plist) || turn.tradesmade >= cNUM_TRADES_PER_TURN 
 				then default_move game else

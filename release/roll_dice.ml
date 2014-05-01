@@ -26,8 +26,15 @@ match resource_of_terrain terrain with
  ) plist relevant_hexes
 
 
-let roll_dice plist board color = 
+let roll_dice plist board color turn : next * (player list) * turn = 
 	let x = random_roll () in  
- 		if x = cROBBER_ROLL
- 		then (((next_turn color), DiscardRequest), plist)
- 		else ((color, ActionRequest), (generate_resources x board plist)) 
+ let turn' = { active = turn.active; 
+ dicerolled = Some x; 
+ cardplayed= turn.cardplayed; 
+ cardsbought= turn.cardsbought; 
+ tradesmade= turn.tradesmade; 
+ pendingtrade= turn.pendingtrade;}
+in 
+	if x = cROBBER_ROLL
+	then (((next_turn color), DiscardRequest), plist, turn')
+ 	else ((color, ActionRequest), (generate_resources x board plist), turn') 

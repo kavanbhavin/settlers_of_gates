@@ -3,6 +3,14 @@ open Util
 open Is_valid
 open Own_util
 
+let any_color_exists piece (intersections, _) = 
+	let corners = piece_corners piece
+in List.fold_left (fun acc element -> 
+match List.nth intersections element with 
+| Some (_) -> true || acc
+| None -> false ) false corners
+
+
 let color_exists piece (intersections, _) color = 
 	let to_check = piece_corners piece 
 	in List.fold_left (fun acc element -> 
@@ -20,10 +28,12 @@ let do_robber_move (active_player: color) ((piece: piece), color) (structs: stru
 	if (is_valid_piece piece) 
 	then try let robber' = piece in 
 			begin match color with  
-				| None -> Some (robber', plist)
+				| None -> if any_color_exists piece structs 
+							then None
+						else Some (robber', plist)
 				| Some color_to_rob -> 
 					if not(color_exists piece structs color_to_rob) 
-					then Some (piece, plist)
+					then None
 					else let plist' = (List.map (fun (color', (inventory, cards), trophies) ->
 					if color'= color_to_rob
 					then let resources= list_of_resources inventory in
