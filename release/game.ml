@@ -11,6 +11,7 @@ open Trade
 open Roll_dice
 open Play_card
 open Default_moves
+open End_turn
 
 type game = state
 
@@ -69,21 +70,27 @@ let handle_move ((map, structs, deck, discard, robber),
     		match act with
         | RollDice -> let (next', plist', turn') = roll_dice plist board color turn
       		in (None, (board, plist', turn', next'))
-		| DomesticTrade tr ->
-			if not (valid_trade tr color plist) || turn.tradesmade >= cNUM_TRADES_PER_TURN 
-				then default_move game else
-			let (turn', next') = update_turn_before_trade turn (color,req) tr color plist in
-			(None, (board, plist, turn', next'))
-		| BuyBuild build -> 
-			 begin match (doBuild game build) with 
-           | Some (x) -> x
-           | None -> default_move game 
-         end 
+		    | DomesticTrade tr ->
+		    	if not (valid_trade tr color plist) || turn.tradesmade >= cNUM_TRADES_PER_TURN 
+		    		then default_move game else
+		    	let (turn', next') = update_turn_before_trade turn (color,req) tr color plist in
+		    	(None, (board, plist, turn', next'))
+		    | BuyBuild build -> 
+		    	begin match (doBuild game build) with 
+              | Some (x) -> x
+              | None -> default_move game 
+          end 
         | PlayCard card ->
           begin match doPlay game card with 
-           | Some x -> x
-           | None -> default_move game 
+              | Some x -> x
+              | None -> default_move game 
           end
+        | EndTurn ->
+          begin match end_turn turn plist with 
+              | Some (turn', plist') -> 
+              (None, (board, plist', turn', (turn'.active , ActionRequest)))
+              | None -> default_move game 
+          end 
     		| _ -> failwith "unimplemented"
     		end
     	| _ -> default_move game
