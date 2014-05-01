@@ -16,17 +16,15 @@ else (pcolor, (inventory, cards), trophies)) acc
 
 
 let generate_resources (roll: roll) ((map: map), (structures: structures), (deck: deck), (discard: discard), (robber: robber)) (plist: player list) = 
-	let hexes_with_corners = List.mapi (fun index (terrain, roll') -> (terrain, roll', piece_corners index)) cDEFAULT_HEXES
-in let relevant_hexes = List.filter (fun (_, roll', _)-> roll=roll') hexes_with_corners
+	let hexes_with_corners = List.mapi (fun index (terrain, roll') -> (index, terrain, roll', piece_corners index)) cDEFAULT_HEXES
+in let relevant_hexes = List.filter (fun (index, _, roll', _)-> roll=roll' && (robber != index)) hexes_with_corners
 in List.fold_left 
-(fun acc (terrain, roll, corners) -> 
+(fun acc (_, terrain, roll, corners) -> 
 match resource_of_terrain terrain with 
 | Some resource -> List.fold_left (fun acc' point -> resources_of_corners resource acc' point structures) acc corners
 | None -> acc
  ) plist relevant_hexes
 
-let players_who_need_discards plist = 
-	List.filter (fun (_, (inventory, _), _) -> (sum_cost inventory) > cMAX_HAND_SIZE ) plist 
 
 let roll_dice plist board color = 
 	let x = random_roll () in  

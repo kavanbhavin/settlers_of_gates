@@ -12,12 +12,21 @@ let color_exists piece (intersections, _) color =
 		| Some (color', _) -> (color'=color) || acc
 		| None -> false || acc ) false to_check
 
-let rec min_valid_robber active_player structs robber plist = 
-	let new_location = 
-		if robber = 0 then 1
-		else 0
-	in do_robber_move active_player (new_location, None) structs robber plist 
-(*can cut down significantly on arguments, many are unused*)
+let rec get_new_piece current_piece = 
+	let random_piece = Random.int 19 
+in if random_piece = current_piece then get_new_piece current_piece else random_piece
+
+let rec min_valid_robber active_player (intersections, roads) robber plist = 
+let new_location = get_new_piece robber 
+in let corners_of_random_piece = piece_corners new_location
+in let colors = List.fold_left (fun acc index -> 
+	match List.nth intersections index with 
+		| Some (color, _) -> color::acc
+		| None -> acc
+ ) [] corners_of_random_piece
+in let random_color_to_rob = pick_random colors
+in do_robber_move active_player (new_location, random_color_to_rob) (intersections, roads) robber plist 
+	
 and do_robber_move (active_player: color) ((piece: piece), color) (structs: structures) (robber: robber) (plist: player list) (failure: robber_failure) : (robber * player list) =
 	let index_to_remove = ref (-1) in 
 	if (is_valid_piece piece) 
@@ -52,7 +61,7 @@ and do_robber_move (active_player: color) ((piece: piece), color) (structs: stru
 				(color_of_player, (inventory', cards), trophies) 
 					else (color_of_player, (inventory, cards), trophies) ) plist'))
 			end 
-		with _ -> (piece, plist)
+		with _ -> min_valid_robber active_player structs robber plist Do_Nothing 
 	else begin match failure with 
 				| Do_Nothing -> (robber, plist)
 				| Move_Robber -> min_valid_robber active_player structs robber plist Do_Nothing
