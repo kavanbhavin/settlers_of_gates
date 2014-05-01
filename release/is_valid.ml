@@ -5,12 +5,12 @@ open Constant
 
 (* If p1 and p2 are adjacent. *)
 let valid_pair (p1, p2) : bool = 
-  p1 >= 0 && p2 >= 0 && p1 <= 53 && p2 <= 53 && 
+  p1 >= 0 && p2 >= 0 && p1 <= cMAX_POINT_NUM && p2 <= cMAX_POINT_NUM && 
   List.mem p2 (adjacent_points p1)
 
 (* Is this settlement within the necessary bounds? *)
 let valid_settle point = 
-  point >= 0 && point <= 53  
+  point >= 0 && point <= cMAX_POINT_NUM  
 
 
 let empty_road (p1, p2) roads : bool = 
@@ -33,7 +33,7 @@ let free_valid_pair (p1, p2) (intersections, roads) : bool =
     (empty_settlement p1 intersections)
 
 let is_valid_piece piece = 
-  piece>=0 && piece<= 18
+  piece>=0 && piece<= cMAX_PIECE_NUM
 
   (* Given a settlement, return a valid road leaving it,
    or None if this is impossible. *)
@@ -96,3 +96,15 @@ let can_build_roads_free r1 r2_o col structs =
         | None -> true
         | Some r2 -> (can_build_road_free r2 col structs))
 
+(* Given a player's color, do they own a settlement
+  on either end of a line? (used mostly for ports)
+    Precondition: line is valid on the map *)
+let owns_port (p1, p2) col inters = 
+  let s1 = List.nth inters p1 and s2 = List.nth inters p2 in
+  let owns_p1 = match s1 with
+    | None -> false
+    | Some (c, _) -> (c = col) and
+      owns_p2 = match s2 with
+    | None -> false
+    | Some (c, _) -> (c = col) in
+  owns_p1 || owns_p2

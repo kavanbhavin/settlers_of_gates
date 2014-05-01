@@ -83,7 +83,6 @@ let play_monopoly plist color turn res =
 				(cur_col, (cur_inv', cur_cards), cur_trophs)) plist' in
 			let turn' = play_card turn in
 			Some (plist', turn')
-			
 
 let doPlay ((map, structs, deck, discard, robber), 
     plist, turn, (color, req)) card = 
@@ -93,23 +92,23 @@ let doPlay ((map, structs, deck, discard, robber),
       begin match (play_knight plist color turn robber_move robber structs) with
         | None -> None
         | Some (robber', turn', plist') ->
-          Some (None, ((map, structs, deck, discard, robber'), plist', turn', (color,req)))
+          Some (None, ((map, structs, deck, Knight::discard, robber'), plist', turn', (color,req)))
       end
     | PlayRoadBuilding ((_, r1), r2') ->
       begin match (play_road_build plist color turn r1 (road_to_line_option r2') structs) with
     	| None -> None
     	| Some (structs', turn', plist') ->
-    	  Some (None, ((map, structs', deck, discard, robber), plist', turn', (color,req)))
+    	  Some (None, ((map, structs', deck, RoadBuilding::discard, robber), plist', turn', (color,req)))
       end 
     | PlayYearOfPlenty (r1, r2_o) ->
       begin match (play_year_of_plenty plist color turn r1 r2_o) with
     	| None -> None
     	| Some (plist', turn') ->
-    		Some (None, ((map, structs, deck, discard, robber), plist', turn', (color,req)))
+    		Some (None, ((map, structs, deck, YearOfPlenty::discard, robber), plist', turn', (color,req)))
       end
     | PlayMonopoly res ->
       begin match (play_monopoly plist color turn res) with
       	| None -> None
       	| Some (plist', turn') ->
-      		Some (None, ((map, structs, deck, discard, robber), plist', turn', (color,req)))
+      		Some (None, ((map, structs, deck, Monopoly::discard, robber), plist', turn', (color,req)))
       end

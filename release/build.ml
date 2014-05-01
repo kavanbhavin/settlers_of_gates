@@ -89,16 +89,22 @@ let build_city_move (inters, rlist) point color plist =
 
 
 (* Checks if we can build a card (if we have enough resources) *)
-let can_build_card col plist = 
+let can_build_card col plist deck = 
 	let (b,w,o,g,l) = get_res col plist in
 	let (bn, wn, on, gn, ln) = cCOST_CARD in
 	let enough_res = b >= bn && w >= wn && o >= on && g >= gn && l >= ln in
-	enough_res
+	let deck = match deck with
+		| Hidden _ -> failwith "Deck is hidden!"
+		| Reveal x -> x in
+	let cards_left = (List.length deck) <> 0 in
+	enough_res && cards_left
 
 (* Goes through the process of building a card, returning the new player list
 	with a card in exchange for lost resource. Precondition: Player can afford card.*)
-let build_card_move color plist turn : (turn * player list)= 
-	let card = ran_card () in
+let build_card_move color plist turn deck : (turn * player list * deck)= 
+	let (card, deck') = match (ran_card deck) with
+		| None -> failwith "Trying to build card but deck is empty!"
+		| Some x -> x in
 	let cardsbought' = Reveal (match turn.cardsbought with
 		| Hidden _ -> failwith "Player with hidden hand buying cards!"
 		| Reveal l -> card::l) in 
@@ -107,11 +113,10 @@ let build_card_move color plist turn : (turn * player list)=
 	let plist' = List.map (fun (col, (res, hand), troph) ->
 		if (col = color) then (col, ((shrink_res res cCOST_CARD), hand), troph)
 		else (col, (res, hand), troph)) plist in
-	(turn', plist')	
+	(turn', plist', 	deck')	
 
 let doBuild ((map, structs, deck, discard, robber), 
     plist, turn, (color, req)) build = 
-let board = (map, structs, deck, discard, robber) in 
   match build with
     | BuildRoad (col, line) -> 
       if (can_build_road structs line color plist) then
@@ -129,9 +134,9 @@ let board = (map, structs, deck, discard, robber) in
         Some (None, ((map, structs', deck, discard, robber), plist', turn, (color, req)))
       else None
     | BuildCard -> 
-      if (can_build_card color plist) then
-        let (turn', plist') = build_card_move color plist turn in
-        Some (None, (board, plist', turn', (color, req)))
+      if (can_build_card color plist deck) then
+        let (turn', plist', deck') = build_card_move color plist turn deck in
+        Some (None, ((map, structs, deck', discard, robber), plist', turn', (color, req)))
       else None
 
 

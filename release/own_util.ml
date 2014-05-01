@@ -32,16 +32,16 @@ let resources_of_list l = match l with
 let sum_of_two_costs (b,w,o,g,l) (c,x,p,h,m) = 
 	((b+c),(w+x), (o+p), (g+h), (l+m))
 
-(* Generates a random card (simulates a draw. *)
-let ran_card () = 
-  let choice = Random.int 5 in 
-  match choice with
-  | 0 -> Knight
-  | 1 -> VictoryPoint
-  | 2 -> RoadBuilding
-  | 3 -> YearOfPlenty
-  | 4 -> Monopoly
-  | _ -> failwith "Random Card random out of bounds!"
+(* Generates a random card (simulates a draw). 
+  Returns card and new deck. None if deck is empty.*)
+let ran_card (deck : deck) = 
+  let deck = match deck with
+    | Hidden _ -> failwith "Deck is hidden!"
+    | Reveal x -> x in
+  let deck_shuffle = randomize deck in 
+  match deck_shuffle with
+    | [] -> None
+    | h::t -> Some (h, Reveal t) 
 
   (* Returns a certain player from a player list.
   THIS FUNCTION FAILS IF THE PLAYER ISN'T IN THE LIST. *)
@@ -107,3 +107,12 @@ let get_settle point inters : intersection =
       | Ore ->  ((b, w, o+num, g, l))
       | Grain -> ((b, w, o, g+num, l))
       | Lumber -> ((b, w, o, g, l+num))
+
+(** Returns a cost where there are n of the resource specified, and zero of all others *)
+let mult_resource_cost (resource : resource) (n : int) : cost = 
+  match resource with
+    | Brick ->  (n,0,0,0,0)
+    | Wool ->   (0,n,0,0,0)
+    | Ore ->    (0,0,n,0,0)
+    | Grain ->  (0,0,0,n,0)
+    | Lumber -> (0,0,0,0,n)

@@ -56,7 +56,6 @@ let handle_move ((map, structs, deck, discard, robber),
   end
     | TradeResponse res -> begin
     	match req with
-      (* fix color changing*)
     	| TradeRequest ->
 	    	let (origin, trade) = get_trade_info turn in
 	    	let plist' = handle_trade res origin trade plist in
@@ -88,11 +87,15 @@ let handle_move ((map, structs, deck, discard, robber),
         | EndTurn ->
           begin match end_turn turn plist with 
               | Some (turn', plist') -> 
-              (None, (board, plist', turn', (turn'.active , ActionRequest)))
+              	(None, (board, plist', turn', (turn'.active , ActionRequest)))
               | None -> default_move game 
           end 
-    		| _ -> failwith "unimplemented"
-    		end
+    	| MaritimeTrade mt ->
+          begin match make_sea_trade map structs color mt plist with
+           	  | Some plist' ->
+           	  	(None, (board, plist', turn, (color, req)))
+           	  | None -> default_move game
+    	  end end
     	| _ -> default_move game
     	end
 
