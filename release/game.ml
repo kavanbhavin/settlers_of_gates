@@ -36,8 +36,10 @@ let handle_move ((map, structs, deck, discard, robber),
   | RobberMove rm -> begin 
     match req with
     | RobberRequest -> 
-    	let (robber', plist') = do_robber_move turn.active rm structs robber plist Move_Robber in
-  		(None, ((map, structs, deck, discard, robber'), plist', turn, (color, ActionRequest)))
+    	begin match do_robber_move turn.active rm structs robber plist with 
+          | Some (robber', plist') -> (None, ((map, structs, deck, discard, robber'), plist', turn, (color, ActionRequest)))
+          | None -> min_valid_robber turn.active structs robber plist 
+        end 
     | _ -> default_move game
   end 
   | DiscardMove (dm) -> begin

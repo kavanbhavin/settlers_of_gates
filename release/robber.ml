@@ -3,8 +3,6 @@ open Util
 open Is_valid
 open Own_util
 
-type robber_failure = Do_Nothing | Move_Robber
-
 let color_exists piece (intersections, _) color = 
 	let to_check = piece_corners piece 
 	in List.fold_left (fun acc element -> 
@@ -16,26 +14,16 @@ let rec get_new_piece current_piece =
 	let random_piece = Random.int 19 
 in if random_piece = current_piece then get_new_piece current_piece else random_piece
 
-let rec min_valid_robber active_player (intersections, roads) robber plist = 
-let new_location = get_new_piece robber 
-in let corners_of_random_piece = piece_corners new_location
-in let colors = List.fold_left (fun acc index -> 
-	match List.nth intersections index with 
-		| Some (color, _) -> color::acc
-		| None -> acc
- ) [] corners_of_random_piece
-in let random_color_to_rob = pick_random colors
-in do_robber_move active_player (new_location, random_color_to_rob) (intersections, roads) robber plist 
 	
-and do_robber_move (active_player: color) ((piece: piece), color) (structs: structures) (robber: robber) (plist: player list) (failure: robber_failure) : (robber * player list) =
+let do_robber_move (active_player: color) ((piece: piece), color) (structs: structures) (robber: robber) (plist: player list) : (robber * player list) option =
 	let index_to_remove = ref (-1) in 
 	if (is_valid_piece piece) 
 	then try let robber' = piece in 
 			begin match color with  
-				| None -> (robber', plist)
+				| None -> Some (robber', plist)
 				| Some color_to_rob -> 
 					if not(color_exists piece structs color_to_rob) 
-					then (piece, plist)
+					then Some (piece, plist)
 					else let plist' = (List.map (fun (color', (inventory, cards), trophies) ->
 					if color'= color_to_rob
 					then let resources= list_of_resources inventory in
@@ -48,7 +36,7 @@ and do_robber_move (active_player: color) ((piece: piece), color) (structs: stru
 								resources) in
 							(color', ((resources_of_list inventory'), cards), trophies)
 					else (color', (inventory, cards), trophies)) plist)
-				in (robber', (List.map (fun (color_of_player, (inventory, cards), trophies)-> 
+				in Some (robber', (List.map (fun (color_of_player, (inventory, cards), trophies)-> 
 					if color_of_player = active_player 
 					then let inventory'= 
 						let resources = list_of_resources inventory in 
@@ -61,8 +49,20 @@ and do_robber_move (active_player: color) ((piece: piece), color) (structs: stru
 				(color_of_player, (inventory', cards), trophies) 
 					else (color_of_player, (inventory, cards), trophies) ) plist'))
 			end 
-		with _ -> min_valid_robber active_player structs robber plist Do_Nothing 
-	else begin match failure with 
-				| Do_Nothing -> (robber, plist)
-				| Move_Robber -> min_valid_robber active_player structs robber plist Do_Nothing
-		end 
+		with _ -> None 
+	else None
+
+let min_valid_robber active_player (intersections, roads) robber plist = 
+let new_location = get_new_piece robber 
+in let corners_of_random_piece = piece_corners new_location
+in let colors = List.fold_left (fun acc index -> 
+	match List.nth intersections index with 
+		| Some (color, _) -> color::acc
+		| None -> acc
+ ) [] corners_of_random_piece
+in let random_color_to_rob = pick_random colors
+in do_robber_move active_player (new_location, random_color_to_rob) (intersections, roads) robber plist 
+
+
+
+
