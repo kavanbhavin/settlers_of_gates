@@ -15,6 +15,21 @@ let min_valid_discard num inventory =
       (num, num_discard::acc)) (list_of_resources inventory) (0, [])) in 
   resources_of_list ls
 
+let need_to_discard color plist : bool = 
+  let (color, ((bh, wh, oh, gh, lh), cards), trophies) = try List.find (fun (c, _, _) ->
+    (c = color)) plist with Not_found ->
+    failwith "Discard Request: Player doesn't exist!" in
+  let total_cards = bh + wh + oh + gh + lh in 
+  total_cards > cMAX_HAND_SIZE
+
+(* Returns the next player to discard, or None. *)
+let rec get_next_discard_player my_color active_color plist : color option =
+  if (my_color = active_color) then 
+    if (need_to_discard my_color plist) then Some my_color else
+    None
+  else if (need_to_discard my_color plist) then Some my_color else
+    get_next_discard_player (next_turn my_color) active_color plist
+
   (* Handles a discard request. Returns modified list of players. *)
 let discard_request color plist (b,w,o,g,l) active_player : (next * player list) = 
   let (color, ((bh, wh, oh, gh, lh), cards), trophies) = try List.find (fun (c, _, _) ->
@@ -36,7 +51,9 @@ let discard_request color plist (b,w,o,g,l) active_player : (next * player list)
       if (c = color) then (c, (new_hand, cards), trophies) else 
         (c, hand, trophies)) plist in 
     if active_player= color then ((active_player, RobberRequest), plist')
-  else ((next_turn color, DiscardRequest), plist')
+  else match get_next_discard_player color active_player plist with
+    | Some next_color -> ((next_color, DiscardRequest), plist')
+    | None -> ((active_player, RobberRequest), plist')
 
     (* Implements the full functionality of a minimum valid discard. *)
   let min_valid_discard_full color plist active_player : (next * player list) = 
