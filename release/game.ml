@@ -21,7 +21,7 @@ let game_of_state s = s
 
 let init_game () = game_of_state (gen_initial_state())
 
-let handle_move ((map, structs, deck, discard, robber), 
+let handle_move' ((map, structs, deck, discard, robber), 
     plist, turn, (color, req)) m =
   let board = (map, structs, deck, discard, robber) in 
   let game = (board, plist, turn, (color, req)) in
@@ -98,5 +98,16 @@ let handle_move ((map, structs, deck, discard, robber),
     	  end end
     	| _ -> default_move game
     	end
+
+(* Handles move, then prints new screen, then returns it. *)
+let handle_move ((map, structs, deck, discard, robber), 
+    plist, turn, (color, req)) m = 
+let temp = handle_move' ((map, structs, deck, discard, robber), 
+	plist, turn, (color, req)) m in
+let (winner, state) = temp in 
+match winner with
+	| Some _ -> temp
+	| None ->
+		(print_update color m state); temp
 
 let presentation s = failwith "Were not too much to pay for birth."
