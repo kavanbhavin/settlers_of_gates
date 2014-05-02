@@ -114,8 +114,8 @@ let presentation (board, plist, turn, (color, req)) =
   let plist' = List.map (fun (color', (inventory, cards), trophies) -> 
     let new_cards = 
         if color' = color 
-        then hide cards 
-        else cards
+        then cards
+        else hide cards
 in (color', (inventory, new_cards), trophies) ) plist 
 in (board, plist', turn, (color, req)) 
 

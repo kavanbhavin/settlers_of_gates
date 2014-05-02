@@ -18,7 +18,7 @@ let color_exists piece (intersections, _) color =
 	in List.fold_left (fun acc element -> 
 		match List.nth intersections element with 
 		| Some (color', _) -> (color'=color) || acc
-		| None -> false || acc ) false to_check
+		| None -> acc ) false to_check
 
 let rec get_new_piece current_piece = 
 	let random_piece = Random.int 19 
@@ -64,15 +64,6 @@ let do_robber_move (active_player: color) ((piece: piece), color) (structs: stru
 		with _ -> None 
 	else None
 
-let print_color color_option : unit =
-	let string_to_print = match color_option with 
-	| Some (Blue) -> "Blue"
-	| Some (Red) -> "Red"
-	| Some (Orange) -> "Orange"
-	| Some (White) -> "White"
-	| None -> "No color"
-in Printf.printf "Color to be robbed %s\n" string_to_print
-
 let min_valid_robber active_player (intersections, roads) robber plist = 
 let new_location = get_new_piece robber 
 in let corners_of_random_piece = piece_corners new_location
@@ -82,7 +73,7 @@ in let colors = List.fold_left (fun acc index ->
 		| None -> acc
  ) [] corners_of_random_piece
 in let random_color_to_rob = pick_random colors
-in (print_color random_color_to_rob); do_robber_move active_player (new_location, random_color_to_rob) (intersections, roads) robber plist 
+in do_robber_move active_player (new_location, random_color_to_rob) (intersections, roads) robber plist 
 
 
 
