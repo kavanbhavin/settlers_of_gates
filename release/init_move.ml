@@ -12,13 +12,15 @@ let min_valid_init (map, structs, deck, discard, robber) color=
     let ipairs = List.mapi (fun i v -> (v, i)) inters in 
     (* Returns the first intersection that has an empty road
       adjacent to it. *)
-    let (inter, i) = try (List.find (fun (inter, i) -> begin match inter with
+    let lst = (List.filter (fun (inter, i) -> begin match inter with
     | None -> if (settle_one_away i inters) then false else
       begin match (get_valid_road i structs color) with
       | Some _ -> true
       | None -> false end
     | Some _ -> false
-    end) ipairs) with Not_found -> failwith "No possible initial move"  in  
+    end) ipairs) in let (inter, i) =  match (pick_random lst) with
+    | None -> failwith "No possible initial move"
+    | Some x -> x in
        (* Given the intersection, find the valid road that can be created,
         then build the settlement and road. *)
        match (get_valid_road i structs color) with
