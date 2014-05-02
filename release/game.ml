@@ -110,4 +110,18 @@ match winner with
 	| None ->
 		(print_update color m state); temp
 
-let presentation s = failwith "Were not too much to pay for birth."
+let presentation (board, plist, turn, (color, req)) = 
+  let plist' = List.map (fun (color', (inventory, cards), trophies) -> 
+    let new_cards = 
+        if color' = color 
+        then hide cards 
+        else cards
+in (color', (inventory, new_cards), trophies) ) plist 
+in (board, plist', turn, (color, req)) 
+
+
+
+
+
+
+
