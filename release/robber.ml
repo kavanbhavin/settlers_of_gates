@@ -3,12 +3,14 @@ open Util
 open Is_valid
 open Own_util
 
-let any_color_exists piece (intersections, _) = 
+let any_color_exists piece (intersections, _) own_color= 
 	let corners = piece_corners piece
 in List.fold_left (fun acc element -> 
 match List.nth intersections element with 
-| Some (_) -> true || acc
-| None -> false ) false corners
+| Some (color', _) -> if (own_color = color')
+then acc
+else true
+| None -> acc ) false corners
 
 
 let color_exists piece (intersections, _) color = 
@@ -28,7 +30,7 @@ let do_robber_move (active_player: color) ((piece: piece), color) (structs: stru
 	if (is_valid_piece piece) && piece != robber 
 	then try let robber' = piece in 
 			begin match color with  
-				| None -> if any_color_exists piece structs 
+				| None -> if any_color_exists piece structs active_player
 							then None
 						else Some (robber', plist)
 				| Some color_to_rob -> 
@@ -70,15 +72,6 @@ let print_color color_option : unit =
 	| Some (White) -> "White"
 	| None -> "No color"
 in Printf.printf "Color to be robbed %s\n" string_to_print
-
-let string_of_color color_option : string =
-	let string_to_print = match color_option with 
-	| Some (Blue) -> "Blue"
-	| Some (Red) -> "Red"
-	| Some (Orange) -> "Orange"
-	| Some (White) -> "White"
-	| None -> "No color"
-in  string_to_print
 
 let min_valid_robber active_player (intersections, roads) robber plist = 
 let new_location = get_new_piece robber 

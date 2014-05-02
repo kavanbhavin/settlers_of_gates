@@ -38,7 +38,7 @@ let discard_request color plist (b,w,o,g,l) active_player : (next * player list)
     failwith "Discard Request: Player doesn't exist!" in
   let total_cards = bh + wh + oh + gh + lh in 
   if (total_cards <= cMAX_HAND_SIZE) then failwith
-    ("Asked to discard cards when didn't have over cMAX_HAND_SIZE!"^(string_of_color (Some color)))
+    "Asked to discard cards when didn't have over cMAX_HAND_SIZE!"
   else 
     let discard_num = (total_cards/2) in 
     let num_given = b + w + o + g + l in 
