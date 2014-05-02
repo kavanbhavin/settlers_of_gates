@@ -2,6 +2,7 @@ open Util
 open Definition 
 open Constant
 open Own_util
+open Discard
 
 let resources_of_corners (resource: resource) (acc: player list) (point: point) (intersections, roads) : player list = 
 	match List.nth intersections point with 
@@ -36,5 +37,7 @@ let roll_dice plist board color turn : next * (player list) * turn =
  pendingtrade= turn.pendingtrade;}
 in 
 	if x = cROBBER_ROLL
-	then (((next_turn color), DiscardRequest), plist, turn')
+	then match get_next_discard_player (next_turn turn.active) turn.active plist with 
+			| Some (color_to_send_request) -> ((color_to_send_request, DiscardRequest), plist, turn')
+			| None -> ((color, RobberRequest), plist, turn')
  	else ((color, ActionRequest), (generate_resources x board plist), turn') 
