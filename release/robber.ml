@@ -25,7 +25,7 @@ in if random_piece = current_piece then get_new_piece current_piece else random_
 	
 let do_robber_move (active_player: color) ((piece: piece), color) (structs: structures) (robber: robber) (plist: player list) : (robber * player list) option =
 	let index_to_remove = ref (-1) in 
-	if (is_valid_piece piece) 
+	if (is_valid_piece piece) && piece != robber 
 	then try let robber' = piece in 
 			begin match color with  
 				| None -> if any_color_exists piece structs 
