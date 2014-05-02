@@ -71,6 +71,15 @@ let print_color color_option : unit =
 	| None -> "No color"
 in Printf.printf "Color to be robbed %s\n" string_to_print
 
+let string_of_color color_option : string =
+	let string_to_print = match color_option with 
+	| Some (Blue) -> "Blue"
+	| Some (Red) -> "Red"
+	| Some (Orange) -> "Orange"
+	| Some (White) -> "White"
+	| None -> "No color"
+in  string_to_print
+
 let min_valid_robber active_player (intersections, roads) robber plist = 
 let new_location = get_new_piece robber 
 in let corners_of_random_piece = piece_corners new_location

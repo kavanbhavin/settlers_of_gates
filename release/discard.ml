@@ -2,6 +2,7 @@ open Util
 open Definition
 open Constant
 open Own_util
+open Robber
 (*make sure the person has enough cards before discard*)
 
 
@@ -25,19 +26,19 @@ let need_to_discard color plist : bool =
 (* Returns the next player to discard, or None. *)
 let rec get_next_discard_player my_color active_color plist : color option =
   if (my_color = active_color) then 
-    if (need_to_discard my_color plist) then Some my_color else
-    None
+    (if (need_to_discard my_color plist) then Some my_color else
+    None)
   else if (need_to_discard my_color plist) then Some my_color else
     get_next_discard_player (next_turn my_color) active_color plist
 
   (* Handles a discard request. Returns modified list of players. *)
 let discard_request color plist (b,w,o,g,l) active_player : (next * player list) = 
   let (color, ((bh, wh, oh, gh, lh), cards), trophies) = try List.find (fun (c, _, _) ->
-    (c = color)) plist with Not_found ->
+    (c = color)) plist with Not_found -> 
     failwith "Discard Request: Player doesn't exist!" in
   let total_cards = bh + wh + oh + gh + lh in 
   if (total_cards <= cMAX_HAND_SIZE) then failwith
-    "Asked to discard cards when didn't have over cMAX_HAND_SIZE!"
+    ("Asked to discard cards when didn't have over cMAX_HAND_SIZE!"^(string_of_color (Some color)))
   else 
     let discard_num = (total_cards/2) in 
     let num_given = b + w + o + g + l in 
@@ -51,7 +52,7 @@ let discard_request color plist (b,w,o,g,l) active_player : (next * player list)
       if (c = color) then (c, (new_hand, cards), trophies) else 
         (c, hand, trophies)) plist in 
     if active_player= color then ((active_player, RobberRequest), plist')
-  else match get_next_discard_player color active_player plist with
+  else match get_next_discard_player (next_turn color) active_player plist' with
     | Some next_color -> ((next_color, DiscardRequest), plist')
     | None -> ((active_player, RobberRequest), plist')
 
