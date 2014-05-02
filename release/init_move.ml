@@ -27,15 +27,15 @@ let min_valid_init (map, structs, deck, discard, robber) color=
          let new_inters = List.mapi (fun i' v -> 
            if (i = i') then new_town else v) inters in
          let new_roads = road::roads in 
-         (new_inters, new_roads)
+         (new_inters, new_roads), snd road
        | None -> failwith "Min_valid_init_move: Move gone!"
 
 (* Handles an initial move request. *)
-let init_request ((map, structs, deck, discard, robber) : board) (p1, p2) color : structures = 
+let init_request ((map, structs, deck, discard, robber) : board) (p1, p2) color : structures * line = 
   let (inters, roads) = structs in
   if (free_valid_pair (p1, p2) structs) && not (settle_one_away p1 inters) then
     let structs' = build_settlement structs p1 color Town in 
-    build_road structs' (p1, p2) color
+    (build_road structs' (p1, p2) color), (p1, p2)
   else min_valid_init (map, structs, deck, discard, robber) color
 
 let update_init_turn num_roads color= 

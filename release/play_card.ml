@@ -34,7 +34,7 @@ let play_knight plist color turn rob_move robber structs=
 			let turn' =  play_card turn in
 			let res = do_robber_move color rob_move structs robber plist' in
 			match res with
-			| None -> (robber, turn, plist)
+			| None -> (robber, turn, plist')
 			| Some (robber', plist') -> (robber', turn', plist')
 			)
 
