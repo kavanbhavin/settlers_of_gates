@@ -28,13 +28,8 @@ let default_move ((map, structs, deck, discard, robber),
 				DiscardMove discarded)
     | RobberRequest -> 
   	   begin match (min_valid_robber turn.active structs robber plist) with 
-		| Some (robber', plist') -> 
-			begin match end_turn turn plist' with 
-			 | Some (turn', plist') -> 
-				((None, ((map, structs, deck, discard, robber), plist', turn', (next_turn color, ActionRequest))),
-					Action EndTurn)
-			 | None -> failwith "robber request without roling die?!"
-			end 
+		| Some (robber', plist', move') -> ((None, ((map, structs, deck, discard, robber'), plist', turn, (next_turn color, ActionRequest))),
+					move')
 		| None -> failwith "robber failed on min_valid_robber"
   	   end 
     | TradeRequest -> let turn' = update_turn_after_trade turn in 

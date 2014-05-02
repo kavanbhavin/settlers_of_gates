@@ -25,14 +25,14 @@ let rec get_new_piece current_piece =
 in if random_piece = current_piece then get_new_piece current_piece else random_piece
 
 	
-let do_robber_move (active_player: color) ((piece: piece), color) (structs: structures) (robber: robber) (plist: player list) : (robber * player list) option =
+let do_robber_move (active_player: color) ((piece: piece), color) (structs: structures) (robber: robber) (plist: player list) : (robber * player list * move) option =
 	let index_to_remove = ref (-1) in 
 	if (is_valid_piece piece) && piece != robber 
 	then try let robber' = piece in 
 			begin match color with  
 				| None -> if any_color_exists piece structs active_player
 							then None
-						else Some (robber', plist)
+						else Some (robber', plist, RobberMove (robber', None))
 				| Some color_to_rob -> 
 					if not(color_exists piece structs color_to_rob) 
 					then None
@@ -59,7 +59,7 @@ let do_robber_move (active_player: color) ((piece: piece), color) (structs: stru
 								else element) 
 							resources) in 
 				(color_of_player, (inventory', cards), trophies) 
-					else (color_of_player, (inventory, cards), trophies) ) plist'))
+					else (color_of_player, (inventory, cards), trophies) ) plist'), RobberMove (robber', color))
 			end 
 		with _ -> None 
 	else None

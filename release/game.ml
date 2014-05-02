@@ -39,12 +39,12 @@ let handle_move' ((map, structs, deck, discard, robber),
     match req with
     | RobberRequest -> 
     	begin match do_robber_move turn.active rm structs robber plist with 
-          | Some (robber', plist') -> ((None, ((map, structs, deck, discard, robber'), plist', turn, (color, ActionRequest))),
-          	Action RollDice)
+          | Some (robber', plist', move') -> ((None, ((map, structs, deck, discard, robber'), plist', turn, (color, ActionRequest))),
+          	move')
           | None -> 
           begin match min_valid_robber turn.active structs robber plist with 
-              | Some (robber', plist') -> ((None, ((map, structs, deck, discard, robber'), plist', turn, (color, ActionRequest))),
-              		Action RollDice)
+              | Some (robber', plist', move') -> ((None, ((map, structs, deck, discard, robber'), plist', turn, (color, ActionRequest))),
+              		move')
               | None -> failwith "min_valid_robber failed to provied a valid robber move"
           end 
         end 
