@@ -1,5 +1,7 @@
 open Definition
 open Util
+open Constant
+
 (* returns hex index based on roll.*)
 
 let piece_of_roll roll = match roll with 
@@ -82,6 +84,35 @@ let get_settle point inters : intersection =
   let get_num_roads col roads : int =
     List.fold_left (fun acc (road_col, _) ->
     if (road_col = col) then acc + 1 else acc) 0 roads
+
+  let get_num_vp_cards col plist = 
+    let (col, (inv, cards), trophs) = get_player col plist in
+    let hand = match cards with
+     | Hidden _ -> failwith "Get Num VP Cards: Cards Hidden!"
+     | Reveal ls -> ls in
+    List.fold_left (fun acc v ->  if (v = Knight) then acc+1
+      else acc) 0 hand
+
+  let get_num_trophy_points col plist = 
+    let (_, _, (_, longroad, largearmy)) = get_player col plist in
+    let count = 0 in 
+    let count = if (longroad) then count + cVP_LONGEST_ROAD else count in
+    let count = if (largearmy) then count + cVP_LARGEST_ARMY else count in
+    count
+
+  (* Gets a player's number of victory points. *)
+  let get_num_vp col plist (inters, roads) : int = 
+    let town_points = cVP_TOWN * (get_num_settles col inters Town) in
+    let city_points = cVP_CITY * (get_num_settles col inters City) in
+    let card_points = cVP_CARD * (get_num_vp_cards col plist) in
+    let troph_points = get_num_trophy_points col plist in
+    town_points + city_points + card_points + troph_points
+
+  (* Returns the winner of the game, or None if it isn't over yet. *)
+  let get_winner plist (inters, roads) : color option = 
+    List.fold_left (fun acc (col, hand, troph) ->
+      if (get_num_vp col plist (inters, roads)) >= cWIN_CONDITION then
+      (Some col) else acc) None plist
 
   let road_to_line_option r = 
     match r with
