@@ -4,6 +4,7 @@ open Own_util
 open Robber
 open Build
 open Util
+open Trophies
 
 (* Player color plays a knight. *)
 let incr_knights color plist = 
@@ -38,8 +39,9 @@ let play_card turn : turn =
 let play_knight plist color turn rob_move robber structs= 
 	match (get_card plist color Knight) with
 		| None -> None
-		| Some plist' -> Some (
-			let turn' =  play_card turn in
+		| Some plist' -> 
+			let plist' = update_largest_army plist' structs in
+			Some ( let turn' =  play_card turn in
 			let res = do_robber_move color rob_move structs robber plist' in
 			match res with
 			| None -> (robber, turn, plist')
@@ -51,10 +53,10 @@ let play_road_build plist color turn r1 r2_o structs =
 		| None -> None
 		| Some plist' -> 
 			if (can_build_roads_free r1 r2_o color structs) then
-				let structs' = build_road structs r1 color in
-				let structs' = (match r2_o with
-					| None -> structs'
-					| Some r2 -> build_road structs' r2 color) in
+				let (structs', plist') = build_road structs r1 color plist in
+				let (structs', plist') = (match r2_o with
+					| None -> (structs', plist')
+					| Some r2 -> build_road structs' r2 color plist) in
 				let turn' = play_card turn in
 				Some (structs', turn', plist')
 			else None
@@ -100,23 +102,23 @@ let doPlay ((map, structs, deck, discard, robber),
       begin match (play_knight plist color turn robber_move robber structs) with
         | None -> None
         | Some (robber', turn', plist') ->
-          Some (None, ((map, structs, deck, Knight::discard, robber'), plist', turn', (color,req)))
+          Some ((get_winner plist' structs), ((map, structs, deck, Knight::discard, robber'), plist', turn', (color,req)))
       end
     | PlayRoadBuilding ((_, r1), r2') ->
       begin match (play_road_build plist color turn r1 (road_to_line_option r2') structs) with
     	| None -> None
     	| Some (structs', turn', plist') ->
-    	  Some (None, ((map, structs', deck, RoadBuilding::discard, robber), plist', turn', (color,req)))
+    	  Some ((get_winner plist' structs'), ((map, structs', deck, RoadBuilding::discard, robber), plist', turn', (color,req)))
       end 
     | PlayYearOfPlenty (r1, r2_o) ->
       begin match (play_year_of_plenty plist color turn r1 r2_o) with
     	| None -> None
     	| Some (plist', turn') ->
-    		Some (None, ((map, structs, deck, YearOfPlenty::discard, robber), plist', turn', (color,req)))
+    		Some ((get_winner plist' structs), ((map, structs, deck, YearOfPlenty::discard, robber), plist', turn', (color,req)))
       end
     | PlayMonopoly res ->
       begin match (play_monopoly plist color turn res) with
       	| None -> None
       	| Some (plist', turn') ->
-      		Some (None, ((map, structs, deck, Monopoly::discard, robber), plist', turn', (color,req)))
+      		Some ((get_winner plist' structs), ((map, structs, deck, Monopoly::discard, robber), plist', turn', (color,req)))
       end

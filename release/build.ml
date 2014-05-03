@@ -2,6 +2,7 @@ open Definition
 open Is_valid
 open Constant
 open Own_util
+open Trophies
 
 (* BUILD STUFF *)
 
@@ -18,11 +19,13 @@ let build_settlement (inters, rlist) p1 color settle_type : structures =
  	((List.mapi (fun i el -> if (i = loc) then 
         Some (color, City) else el) inters), rlist)
 
-let build_road (inters, rlist) line color : structures = 
+let build_road (inters, rlist) line color plist : structures * (player list) = 
   if (not (empty_road line rlist)) then 
     failwith "Trying to override road"
   else 
-    (inters, ((color, line)::rlist))
+  	let structs' = (inters, ((color, line)::rlist)) in
+  	let plist' = update_longest_road plist structs' in
+  	(structs', plist')
 
  (* Checks if we can build a road (enough resources and its free / in range. *)
  let can_build_road (inters, rlist) line col plist = 
@@ -41,7 +44,7 @@ let build_road_move (inters, rlist) line color plist =
 	let plist' = List.map (fun (col, (res, hand), troph) ->
 		if (col = color) then (col, ((shrink_res res cCOST_ROAD), hand), troph)
 		else (col, (res, hand), troph)) plist in
-	let structs' = build_road (inters, rlist) line color in
+	let (structs', plist') = build_road (inters, rlist) line color plist' in
 	(structs', plist')
 
 (* Checks if we can build a town (enough resources and its free. *)
@@ -121,22 +124,22 @@ let doBuild ((map, structs, deck, discard, robber),
     | BuildRoad (col, line) -> 
       if (can_build_road structs line color plist) then
         let (structs', plist') = build_road_move structs line color plist in
-        Some (None, ((map, structs', deck, discard, robber), plist', turn, (color, req)))
+        Some ((get_winner plist' structs'), ((map, structs', deck, discard, robber), plist', turn, (color, req)))
       else None
     | BuildTown point ->
       if (can_build_town structs point color plist) then
         let (structs',plist') = build_town_move structs point color plist in
-        Some (None, ((map, structs', deck, discard, robber), plist', turn, (color, req)))
+        Some ((get_winner plist' structs'), ((map, structs', deck, discard, robber), plist', turn, (color, req)))
       else None 
     | BuildCity point -> 
       if (can_build_city structs point color plist) then
         let (structs',plist') = build_city_move structs point color plist in
-        Some (None, ((map, structs', deck, discard, robber), plist', turn, (color, req)))
+        Some ((get_winner plist' structs'), ((map, structs', deck, discard, robber), plist', turn, (color, req)))
       else None
     | BuildCard -> 
       if (can_build_card color plist deck) then
         let (turn', plist', deck') = build_card_move color plist turn deck in
-        Some (None, ((map, structs, deck', discard, robber), plist', turn', (color, req)))
+        Some ((get_winner plist' structs), ((map, structs, deck', discard, robber), plist', turn', (color, req)))
       else None
 
 
