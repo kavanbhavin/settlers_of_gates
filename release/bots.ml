@@ -2,3 +2,4 @@
 
 open Babybot
 open First_attempt_at_bot
+open Bot2

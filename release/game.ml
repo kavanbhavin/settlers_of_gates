@@ -20,7 +20,7 @@ let state_of_game g = g
 let game_of_state s = s
 
 
-let init_game () = game_of_state (gen_initial_state())
+let init_game () = game_of_state (gen_random_initial_state())
 
 let handle_move' ((map, structs, deck, discard, robber), 
     plist, turn, (color, req)) m : (game outcome) * move =

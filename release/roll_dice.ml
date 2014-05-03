@@ -17,7 +17,8 @@ else (pcolor, (inventory, cards), trophies)) acc
 
 
 let generate_resources (roll: roll) ((map: map), (structures: structures), (deck: deck), (discard: discard), (robber: robber)) (plist: player list) = 
-	let hexes_with_corners = List.mapi (fun index (terrain, roll') -> (index, terrain, roll', piece_corners index)) cDEFAULT_HEXES
+let (hexes, _) = map in 
+let hexes_with_corners = List.mapi (fun index (terrain, roll') -> (index, terrain, roll', piece_corners index)) hexes
 in let relevant_hexes = List.filter (fun (index, _, roll', _)-> roll=roll' && (robber != index)) hexes_with_corners
 in List.fold_left 
 (fun acc (_, terrain, roll, corners) -> 
