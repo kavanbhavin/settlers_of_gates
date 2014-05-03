@@ -3,14 +3,20 @@ open Util
 open Is_valid
 open Own_util
 open Print
+open Constant
 
-let any_color_exists piece (intersections, _) own_color= 
+let color_has_resource color plist = 
+	List.fold_left (fun acc (color', (inventory, cards), trophies) -> 
+	if color'=color then (sum_cost inventory) > 0 || acc 
+	else acc) false plist
+
+let any_color_exists_and_has_resource piece (intersections, _) own_color plist = 
 	let corners = piece_corners piece
 in List.fold_left (fun acc element -> 
 match List.nth intersections element with 
 | Some (color', _) -> if (own_color = color')
 then acc
-else true
+else ((color_has_resource color' plist) || acc)
 | None -> acc ) false corners
 
 
@@ -22,20 +28,16 @@ let color_exists piece (intersections, _) color =
 		| None -> acc ) false to_check
 
 let rec get_new_piece current_piece = 
-	let random_piece = Random.int 19 
+	let random_piece = Random.int cNUM_PIECES
 in if random_piece = current_piece then get_new_piece current_piece else random_piece
 
-let color_has_resource color plist = 
-	List.fold_left (fun acc (color', (inventory, cards), trophies) -> 
-	if color'=color then (sum_cost inventory) > 0 || acc 
-	else acc) false plist
 	
 let do_robber_move (active_player: color) ((piece: piece), color) (structs: structures) (robber: robber) (plist: player list) : (robber * player list * move) option =
 	let index_to_remove = ref (-1) in 
 	if (is_valid_piece piece) && piece != robber 
 	then try let robber' = piece in 
 			begin match color with  
-				| None -> if any_color_exists piece structs active_player
+				| None -> if any_color_exists_and_has_resource piece structs active_player plist
 							then ((Printf.printf "color exists but didn't try to steal from anyone"); None)
 						else Some (robber', plist, RobberMove (robber', None))
 				| Some color_to_rob -> 
