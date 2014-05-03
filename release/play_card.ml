@@ -5,6 +5,12 @@ open Robber
 open Build
 open Util
 
+(* Player color plays a knight. *)
+let incr_knights color plist = 
+	List.map (fun (pcol, phand, (pk, px, py)) ->
+		if (pcol = color) then (pcol, phand, (pk+1,px,py)) else
+		(pcol, phand, (pk, px, py))) plist
+
 (* If player color has card, remove one copy of it
 	and return the new player list, otherwise None. *)
 let get_card plist color card : player list option= 
@@ -16,6 +22,8 @@ let get_card plist color card : player list option=
 			if (found || v <> card) then (v::ls, found) else
 			(ls, true))  deck ([], false)) in
 	if (not found) then None else 
+		let plist = if (card = Knight) then
+			incr_knights color plist else plist in
 		Some (List.map (fun (col, (res, cards), troph) ->
 			if (col = color) then (col, (res, Reveal deck'), troph)
 			else (col, (res, cards), troph)) plist)
