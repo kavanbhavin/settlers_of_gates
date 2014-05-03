@@ -1,5 +1,6 @@
 open Definition
 open Util
+open Print
 (* returns hex index based on roll.*)
 
 let piece_of_roll roll = match roll with 
@@ -116,3 +117,10 @@ let mult_resource_cost (resource : resource) (n : int) : cost =
     | Ore ->    (0,0,n,0,0)
     | Grain ->  (0,0,0,n,0)
     | Lumber -> (0,0,0,0,n)
+
+
+
+let string_of_color_option color_option = 
+  match color_option with 
+      | Some (x) -> string_of_color x
+      | None -> "No color"

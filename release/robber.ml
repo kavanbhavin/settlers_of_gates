@@ -2,6 +2,7 @@ open Definition
 open Util
 open Is_valid
 open Own_util
+open Print
 
 let any_color_exists piece (intersections, _) own_color= 
 	let corners = piece_corners piece
@@ -24,6 +25,10 @@ let rec get_new_piece current_piece =
 	let random_piece = Random.int 19 
 in if random_piece = current_piece then get_new_piece current_piece else random_piece
 
+let color_has_resource color plist = 
+	List.fold_left (fun acc (color', (inventory, cards), trophies) -> 
+	if color'=color then (sum_cost inventory) > 0 || acc 
+	else acc) false plist
 	
 let do_robber_move (active_player: color) ((piece: piece), color) (structs: structures) (robber: robber) (plist: player list) : (robber * player list * move) option =
 	let index_to_remove = ref (-1) in 
@@ -31,11 +36,11 @@ let do_robber_move (active_player: color) ((piece: piece), color) (structs: stru
 	then try let robber' = piece in 
 			begin match color with  
 				| None -> if any_color_exists piece structs active_player
-							then None
+							then ((Printf.printf "color exists but didn't try to steal from anyone"); None)
 						else Some (robber', plist, RobberMove (robber', None))
 				| Some color_to_rob -> 
 					if not(color_exists piece structs color_to_rob) 
-					then None
+					then ((Printf.printf "tried to rob %s but no such color exists" (string_of_color color_to_rob)); None)
 					else let plist' = (List.map (fun (color', (inventory, cards), trophies) ->
 					if color'= color_to_rob
 					then let resources= list_of_resources inventory in
@@ -61,8 +66,8 @@ let do_robber_move (active_player: color) ((piece: piece), color) (structs: stru
 				(color_of_player, (inventory', cards), trophies) 
 					else (color_of_player, (inventory, cards), trophies) ) plist'), RobberMove (robber', color))
 			end 
-		with _ -> None 
-	else None
+		with _ -> ((Printf.printf "list.find failed"); None) 
+	else ((Printf.printf "invalid piece");  None)
 
 let min_valid_robber active_player (intersections, roads) robber plist = 
 let new_location = get_new_piece robber 
@@ -72,8 +77,12 @@ in let colors = List.fold_left (fun acc index ->
 		| Some (color, _) -> if (color= active_player) then acc else color::acc
 		| None -> acc
  ) [] corners_of_random_piece
-in let random_color_to_rob = pick_random colors
-in do_robber_move active_player (new_location, random_color_to_rob) (intersections, roads) robber plist 
+in let random_color_to_rob = pick_random (List.filter (fun color -> color_has_resource color plist) colors)
+in match do_robber_move active_player (new_location, random_color_to_rob) (intersections, roads) robber plist with 
+		| Some (x) -> Some (x)
+		| None -> 
+	(Printf.printf "Robber moved by %s to %d to rob color: %s" (string_of_color active_player) new_location (string_of_color_option random_color_to_rob));
+	None
 
 
 
