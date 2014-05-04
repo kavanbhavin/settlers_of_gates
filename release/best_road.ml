@@ -8,12 +8,6 @@ let board_points = let rec helper n acc max =
 	else helper (n+1) (n::acc) max
 in helper 0 [] cNUM_POINTS
 
-let inters : (intersection list) ref = ref []
-
-let init_best_road inters'=
-	inters:= inters'
-
-
 let rec remove_duplicates ls = 
 	let ls' = List.sort compare ls
 in match ls' with 
@@ -58,37 +52,37 @@ in (Hashtbl.add h (smaller, bigger) distance); distance
 
 (* Returns true if there exists a settlement
     < 2 road lengths away from point. *)
-  let settle_one_away point : bool = 
+  let settle_one_away point inters: bool = 
     let neighbors = adjacent_points point in
     List.fold_left (fun acc v ->
-      acc || (match (List.nth !inters v) with
+      acc || (match (List.nth inters v) with
         | None -> false
         | Some _ -> true)) false neighbors
 
-let convert_to_our_type = 
-	let a = List.map (fun i-> (i, settle_one_away i)) board_points
+let convert_to_our_type inters= 
+	let a = List.map (fun i-> (i, settle_one_away i inters)) board_points
 	in List.map (fun (i, b) -> if b then DistanceToNearest (i,0,0) else CanBuild i) a 
 
-let only_free_and_buildable_points : own_point list = 
+let only_free_and_buildable_points inters : own_point list = 
 	List.filter (fun a -> 
 	match a with 
 	| CanBuild i -> 
-		begin match List.nth !inters i with 
+		begin match List.nth inters i with 
 				| None -> true
 				| _ -> false
 			end
-	| _ -> false ) convert_to_our_type
+	| _ -> false ) (convert_to_our_type inters)
 
-let fill_in_distances : own_point list = 
-	List.rev (List.fold_left (fun (acc : own_point list) (ele : own_point) -> 
+let fill_in_distances inters : own_point list = 
+	let fbp = only_free_and_buildable_points inters in List.rev (List.fold_left (fun (acc : own_point list) (ele : own_point) -> 
 	match ele with 
 	| DistanceToNearest (i, _, _) -> let distances : int list = 
 			List.map (fun a -> 
 				begin match a with 
-					| CanBuild (a) -> (distance_between_points_array a i) 
+					| CanBuild (a) -> (memoized_distance (a,i)) 
 					| _ -> failwith "not can build in free and buildable?"
 				end
-	) only_free_and_buildable_points 
+	) fbp
 		in let (min_distance, second_min_distance) : int * int = (List.fold_left (fun (min1, min2) element -> 
 			if element < min1 
 			then (element, min1)
@@ -96,17 +90,18 @@ let fill_in_distances : own_point list =
 			then (min1, min2)
 else (min1, min2)) (cNUM_POINTS, cNUM_POINTS) distances)
 in ((DistanceToNearest (i, min_distance, second_min_distance))::acc)
-	| _ -> ele::acc) [] only_free_and_buildable_points)
+	| _ -> ele::acc) [] fbp)
 
-let sorted_distances = List.sort (fun a b -> 
+let sorted_distances inters= List.sort (fun a b -> 
 	begin match (a,b) with 
 		| (CanBuild i, CanBuild j) 
 		| (CanBuild i, DistanceToNearest (j, _, _ )) 
 		| ((DistanceToNearest (i, _, _), CanBuild j))
 		| ((DistanceToNearest (i, _, _), DistanceToNearest(j, _, _))) -> compare i j
-	end ) fill_in_distances
+	end ) (fill_in_distances inters)
 
-let best_road_from_point p : int= let our_type = List.map (fun a -> List.nth sorted_distances a) (adjacent_points p) 
+let best_road_from_point p  inters : int= let s = sorted_distances inters 
+in let our_type = List.map (fun a -> List.nth s a) (adjacent_points p) 
 	in let asd = List.fold_left (fun (acc : own_point) (ele : own_point) -> 
 	match (acc, ele) with 
 		| (CanBuild _, CanBuild _) -> acc  
