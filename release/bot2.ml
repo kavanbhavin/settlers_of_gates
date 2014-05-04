@@ -12,6 +12,8 @@ module Bot = functor (S : Soul) -> struct
 
   (* A pointer to the current objective. *)
   let goal = ref NA
+  (* A pointer to the resources we need to meet the current objective. *)
+  let res_needed = ref (0, 0, 0, 0, 0)
 
   (* A running list of which resources we own generator tiles for. *)
   let (res_tiles : resource list ref) = ref []
@@ -19,7 +21,8 @@ module Bot = functor (S : Soul) -> struct
   (* If you use side effects, start/reset your bot for a new game *)
   let initialize () = 
     (res_tiles := []);
-     goal:=NA
+     goal:=NA;
+     res_needed:=(0,0,0,0,0)
 
   (* Uses weightings from botutil to pick an initial move. *)
   let choose_init_move (inters, roads) board color : line = 
@@ -59,16 +62,28 @@ module Bot = functor (S : Soul) -> struct
           (* If we can still build another town, set this as next objective. *)
           (if (get_num_settles color inters Town) < cMAX_TOWNS_PER_PLAYER then
           town_builder structs board color plist else ());
+          (res_needed:= get_goal_res !goal);
+
+          (* If we cannot afford our goal, see if there's a way to get there. *)
+          if not (can_pay_cost !res_needed color plist) then
+            match try_for_res (get_res color plist) !res_needed with
+              | SPlayerTrade (i, c1, c2) -> default_action turn
+              | SMaritimeTrade (res1, res2) -> Action (MaritimeTrade (res1, res2))
+              | NoStrategy -> default_action turn
+        else 
           begin match !goal with
             | ORoad (p1, p2) -> if (can_afford RoadBuy color plist) then
                 let () = goal:= NA in 
+                let () = res_needed:= (0,0,0,0,0) in
                 Action (BuyBuild (BuildRoad (color, (p1, p2)))) else default_action turn
             | OKnight -> default_action turn
             | OCity loc -> if (can_afford CityBuy color plist) then
                 let () = goal:=NA in
+                let () = res_needed:= (0,0,0,0,0) in
                 Action (BuyBuild (BuildCity loc)) else default_action turn
             | OTown loc -> if (can_afford TownBuy color plist) then
                 let () = goal:=NA in
+                let () = res_needed:= (0,0,0,0,0) in
                 Action (BuyBuild (BuildTown loc)) else default_action turn
             | NA -> default_action turn
           end

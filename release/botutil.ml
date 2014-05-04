@@ -5,6 +5,7 @@ open Constant
 
   type objective = NA | OTown of int | OCity of int | OKnight | ORoad of int * int
   type to_buy = RoadBuy | TownBuy | CityBuy | CardBuy
+  type strategy = SPlayerTrade of int * cost * cost | SMaritimeTrade of resource * resource | NoStrategy
 
 (* Returns a certain player from a player list.
 THIS FUNCTION FAILS IF THE PLAYER ISN'T IN THE LIST. *)
@@ -12,11 +13,16 @@ let get_player color plist =
 	try List.find (fun (c, _, _) -> c = color) plist with
 	Not_found -> failwith "get_player : Player not found!"
 
+
 let get_res color plist = 
 	let (_, (res, _), _) = get_player color plist in res
 
 let enough_res (b,w,o,g,l) (bn, wn, on, gn, ln) : bool =
 	b >= bn && w >= wn && o >= on && g >= gn && l >= ln
+
+let can_pay_cost cost color plist = 
+    let have = get_res color plist in
+	enough_res have cost
 
 let can_afford want color plist = 
 	let have = get_res color plist in
@@ -202,6 +208,16 @@ let get_near_empty ((inters, roads) : structures) (color : color) (first_done : 
 	let () = print_endline ("two away: "^(string_of_int (List.length two_away))) in
 	two_away
 
+(* Given the resources we have and those we need, return a list of the ones we need.
+	List will be sorted by how badly we need each one for convenience. *)
+let res_needed (b,w,o,g,l) (bn,wn,on,gn,ln) : (resource * int) list = 
+	let ls = [] in 
+	let ls = if (b < bn) then (Brick, (bn - b))::ls else ls in
+	let ls = if (w < wn) then (Wool, (wn - w))::ls else ls in
+	let ls = if (o < on) then (Ore, (on - o))::ls else ls in
+	let ls = if (g < gn) then (Grain, (gn - g))::ls else ls in
+	let ls = if (l < ln) then (Lumber, (ln - l))::ls else ls in
+	List.sort (fun (_, a) (_, b) -> b - a) ls
 
 
 (* Is a road empty, owned by us, or by someone else? *)
@@ -253,6 +269,15 @@ let get_init_road ((inters, roads) : structures) res_tiles board color loc : int
 			| Some (a, b) -> b
 			| None -> (0, 0)
 
+ (* Update our goal resources so we know what to strive for. *)
+ let get_goal_res obj : cost = 
+ 	match obj with
+ 	 | NA -> (0,0,0,0,0)
+ 	 | OTown _ -> cCOST_TOWN
+ 	 | OCity _ -> cCOST_CITY
+ 	 | OKnight -> cCOST_CARD
+ 	 | ORoad _ -> cCOST_ROAD
+
 (* We want to build a town, What is a good next move?
 Should we try to build it right away, or should we build a road 
 to a better location first? Should we initiate a trade? ... *)
@@ -273,3 +298,31 @@ let town_move ((inters, roads) : structures) res_tiles board (b,w,o,g,l) color :
 			  	trail_to_move (inters, roads) color loc trail
 			  end in
 	choose_move weighted_locs
+
+(* Given the resources we have and those we need,
+	try to get some of the ones we need by whatever means
+	are available (sea trade, player trade, playing cards ,etc) *)
+let try_for_res have need :  strategy =
+	let (b, w, o, g, l) = have in 
+	let (bn, wn, on, gn, ln) = need in
+	let need = res_needed have need in
+	let (res_to_get : resource option) = match need with
+		| [] -> None
+		| (h, _)::t -> Some h in
+	(* Check for usefulness of maritime trade. *)
+	let trade_res = if (b >= bn + 4) then Some Brick 
+			   else if (w >= wn + 4) then Some Wool 
+			   else if (o >= on + 4) then Some Ore
+			   else if (g >= gn + 4) then Some Grain
+			   else if (l >= ln + 4) then Some Lumber
+			   else None in
+	match trade_res with
+		| Some r_have -> begin match res_to_get with
+			| Some r_want -> SMaritimeTrade (r_have, r_want)
+			| None -> NoStrategy (* We shouldn't have called this function if we don't need a resource! *)
+		 end
+		| None ->
+
+	(* We have tried everything, just give up. *)
+	NoStrategy
+
