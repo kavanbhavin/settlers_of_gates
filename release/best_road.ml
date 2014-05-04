@@ -74,7 +74,7 @@ let only_free_and_buildable_points inters : own_point list =
 	| _ -> false ) (convert_to_our_type inters)
 
 let fill_in_distances inters : own_point list = 
-	let fbp = only_free_and_buildable_points inters in List.rev (List.fold_left (fun (acc : own_point list) (ele : own_point) -> 
+	List.rev (List.fold_left (fun (acc : own_point list) (ele : own_point) -> 
 	match ele with 
 	| DistanceToNearest (i, _, _) -> let distances : int list = 
 			List.map (fun a -> 
@@ -82,7 +82,7 @@ let fill_in_distances inters : own_point list =
 					| CanBuild (a) -> (memoized_distance (a,i)) 
 					| _ -> failwith "not can build in free and buildable?"
 				end
-	) fbp
+	) (only_free_and_buildable_points inters)
 		in let (min_distance, second_min_distance) : int * int = (List.fold_left (fun (min1, min2) element -> 
 			if element < min1 
 			then (element, min1)
@@ -90,7 +90,7 @@ let fill_in_distances inters : own_point list =
 			then (min1, min2)
 else (min1, min2)) (cNUM_POINTS, cNUM_POINTS) distances)
 in ((DistanceToNearest (i, min_distance, second_min_distance))::acc)
-	| _ -> ele::acc) [] fbp)
+	| _ -> ele::acc) [] (convert_to_our_type inters))
 
 let sorted_distances inters= List.sort (fun a b -> 
 	begin match (a,b) with 
@@ -100,7 +100,7 @@ let sorted_distances inters= List.sort (fun a b ->
 		| ((DistanceToNearest (i, _, _), DistanceToNearest(j, _, _))) -> compare i j
 	end ) (fill_in_distances inters)
 
-let best_road_from_point p  inters : int= let s = sorted_distances inters 
+let best_road_from_point p inters : int= let s = sorted_distances inters 
 in let our_type = List.map (fun a -> List.nth s a) (adjacent_points p) 
 	in let asd = List.fold_left (fun (acc : own_point) (ele : own_point) -> 
 	match (acc, ele) with 
