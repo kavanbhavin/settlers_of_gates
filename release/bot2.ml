@@ -29,8 +29,10 @@ module Bot = functor (S : Soul) -> struct
       | [] -> (0, 0)
       | (_, h, score)::t -> match get_valid_road h (inters, roads) color with
         | None -> pick_move t
-        | Some (_, (l1, l2)) ->
-          (add_res l1 res_tiles board); (l1,l2)  in
+        | Some _ ->
+          let () = print_endline ("score: "^(string_of_int score)) in
+          (add_res h res_tiles board); 
+            get_init_road (inters, roads) !res_tiles board color h in
     pick_move weighted_inters
 
    (* We have yet to build the maximum number of towns.

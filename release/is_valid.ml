@@ -62,21 +62,15 @@ let own_settle_with_point point col inters : bool =
 
 (* Returns true if road is adjacent to a road or settlement owned by color. *)
 let road_in_range col (inters, roads) (start_loc, end_loc) = 
-    let near_start = adjacent_points start_loc and
-        near_end   = adjacent_points end_loc in
-    let near_road = near_start@near_end in
+    let near_road = start_loc::[end_loc] in
     let own_adj_road = List.fold_left (fun acc point ->
       acc || (own_road_with_point point col roads)) false near_road in
-    let own_adj_settle = List.fold_left (fun acc point ->
-      acc || (own_settle_with_point point col inters)) false near_road in
-    own_adj_road || own_adj_settle
+    own_adj_road 
 
 (* Returns true if the road is a adjacent to a road owned by color,
   and is far enough away from existing settlements to be built. *)
 let settle_in_range col (inters, roads) settle : bool = 
-  let neighbors = adjacent_points settle in
-  let own_adj_road = List.fold_left (fun acc point ->
-    acc || (own_road_with_point point col roads)) false neighbors in
+  let own_adj_road = own_road_with_point settle col roads in
   let too_close = settle_one_away settle inters in
   own_adj_road && (not too_close)
 
