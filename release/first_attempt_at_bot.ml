@@ -4,6 +4,7 @@ open Constant
 open Util
 open Own_util
 open Build
+open Best_road
 
 let name = "first_attempt_at_bot"
 
@@ -62,7 +63,14 @@ let have_enough_resources_city (b,w,o,g,l) =
 let have_enough_resources_card (b,w,o,g,l) = 
 	let (bn, wn, on, gn, ln) = cCOST_CARD in 
 	b >= bn && w >= wn && o >= on && g >= gn && l >= ln
-
+let have_enough_resources_road (b,w,o,g,l) = 
+	let (bn, wn, on, gn, ln) = cCOST_ROAD in 
+	b >= bn && w >= wn && o >= on && g >= gn && l >= ln
+let find_road rlist intersections my_color = let my_rlist = List.filter (fun (c, _ ) -> if c = my_color then true else false) rlist
+		in match my_rlist with 
+			| (c, (p1, p2))::tl -> let other = best_road_from_point p2 intersections rlist
+		in (Printf.printf "returning road %d to %d\n" p2 other; (p2, other))
+			| _ -> failwith "noroads"
 let rec play_valid_card cards plist c structures= 
 	match cards with 
 		| hd::tl -> 
@@ -92,8 +100,9 @@ in List.filter (fun (i, _) ->
       | DiscardRequest-> DiscardMove(0,0,0,0,0)
       | TradeRequest -> TradeResponse(false)
       | ActionRequest -> 
-      let my_inventory = get_res c plist in 
-      if have_enough_resources_city my_inventory
+      let my_inventory = get_res c plist in if have_enough_resources_road my_inventory
+      then Action( BuyBuild(BuildRoad ((turn.active , (find_road (snd structures) (fst structures) turn.active))))) 
+  else if have_enough_resources_city my_inventory
       then match pick_random (list_of_my_towns structures c) with
       			| Some ((index, _)) -> Action (BuyBuild (BuildCity index))
       			| None -> failwith "no towns?!"
