@@ -64,7 +64,8 @@ let own_settle_with_point point col inters : bool =
 let road_in_range col (inters, roads) (start_loc, end_loc) = 
     let near_road = start_loc::[end_loc] in
     let own_adj_road = List.fold_left (fun acc point ->
-      acc || (own_road_with_point point col roads)) false near_road in
+      acc || ((own_road_with_point point col roads) && (match List.nth inters point with
+        | None -> true | Some (c, _) -> (c = col)))) false near_road in
     own_adj_road 
 
 (* Returns true if the road is a adjacent to a road owned by color,

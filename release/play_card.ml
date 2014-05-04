@@ -53,10 +53,10 @@ let play_road_build plist color turn r1 r2_o structs =
 		| None -> None
 		| Some plist' -> 
 			if (can_build_roads_free r1 r2_o color structs) then
-				let (structs', plist') = build_road structs r1 color plist in
+				let (structs', plist') = build_road structs r1 color plist' in
 				let (structs', plist') = (match r2_o with
 					| None -> (structs', plist')
-					| Some r2 -> build_road structs' r2 color plist) in
+					| Some r2 -> build_road structs' r2 color plist') in
 				let turn' = play_card turn in
 				Some (structs', turn', plist')
 			else None
