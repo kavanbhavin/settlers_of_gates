@@ -100,9 +100,9 @@ in List.filter (fun (i, _) ->
       | DiscardRequest-> DiscardMove(0,0,0,0,0)
       | TradeRequest -> TradeResponse(false)
       | ActionRequest -> 
-      let my_inventory = get_res c plist in if have_enough_resources_road my_inventory
+      let my_inventory = get_res c plist in (*if have_enough_resources_road my_inventory
       then Action( BuyBuild(BuildRoad ((turn.active , (find_road (snd structures) (fst structures) turn.active))))) 
-  else if have_enough_resources_city my_inventory
+  else *)if have_enough_resources_city my_inventory
       then match pick_random (list_of_my_towns structures c) with
       			| Some ((index, _)) -> Action (BuyBuild (BuildCity index))
       			| None -> failwith "no towns?!"
