@@ -127,3 +127,5 @@ in let our_type_with_built_roads_removed = List.filter (fun a -> match a with
 in match asd with 
 | CanBuild i -> i 
 | DistanceToNearest (j, _, _) -> j
+
+(* settlement, settlement location, weight sorted so first one is the best *)
