@@ -171,7 +171,7 @@ in match asd with
 
 (* returns the best points on the board according to this density based strategy *)
 
-let best_roads inters rlist own_color = let entire_map = sorted_distances inters 
+let best_roads inters rlist own_color : point = let entire_map = sorted_distances inters 
 	in let entire_map_sorted = List.sort (fun a b-> 
 	match (a,b) with 
 		| (CanBuild (i,j), CanBuild (k,l)) -> if j  = l then  0 else if j<l then (-1) else 1 
