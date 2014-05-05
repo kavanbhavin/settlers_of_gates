@@ -36,7 +36,7 @@ let roll_dice plist board color turn : next * (player list) * turn =
  cardsbought= turn.cardsbought; 
  tradesmade= turn.tradesmade; 
  pendingtrade= turn.pendingtrade;}
-in (Printf.printf "dice rolled %d \n" x);
+in (* (Printf.printf "dice rolled %d \n" x); *)
 	if x = cROBBER_ROLL
 	then match get_next_discard_player (next_turn turn.active) turn.active plist with 
 			| Some (color_to_send_request) -> ((color_to_send_request, DiscardRequest), plist, turn')

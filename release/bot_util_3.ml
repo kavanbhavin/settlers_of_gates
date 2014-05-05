@@ -1,12 +1,14 @@
 open Util
 open Definition
 open Constant
+open Best_road
 
 type phase = Early | Middle | Late 
   type objective = NA | OTown of int | OCity of int | OCard | ORoad of int * int
   type to_buy = RoadBuy | TownBuy | CityBuy | CardBuy
   type strategy = SPlayerTrade of int * cost * cost | SMaritimeTrade of resource * resource | SBuildCard | NoStrategy
   	| SPlayYoP of resource * resource | SPlayMonopoly of resource | SPlayKnight of robbermove | SPlayRoadBuild of int * int
+  	| SBuildRoad of road
 
 (* Returns a certain player from a player list.
 THIS FUNCTION FAILS IF THE PLAYER ISN'T IN THE LIST. *)
@@ -103,10 +105,10 @@ let can_afford want color plist =
 (* Expected number of times a number is rolled 
 	out of 36 rolls, scaled as necessary. *)
 let expected_of_36 num import_factor = 
-	let (a,b,c,d,e,f,g) = (1,2,3,4,5,6,0) in
+	let (a,b,c,d,e,f,g) = (*(1,2,3,4,5,6,0) in
 	let (a,b,c,d,e,f,g) = if (import_factor = 1) then (a,b,c,d,e,f,g) else
-	if (import_factor = 2) then (1,3,6,10,15,20,0) else 
-	if (import_factor = 3) then (1, 5, 12, 22, 35, 51, 0) else (a,b,c,d,e,f,g)
+	if (import_factor = 2) then*) (1,2,4,7,11,16,0) (*else 
+	if (import_factor = 3) then (1, 5, 12, 22, 35, 51, 0) else (a,b,c,d,e,f,g) *)
 	in match num with
 	| 2 | 12 -> a
 	| 3 | 11 -> b
@@ -132,8 +134,16 @@ let res_weight res power reslist =
 	power
 
 let num_owned res reslist = 
-	List.fold_left (fun acc v ->
+	List.fold_left (fun acc (v, _) ->
 		if (v = res) then acc+1 else acc) 0 reslist
+
+let num_dice_owned roll reslist = 
+	List.fold_left (fun acc (_, r) ->
+		if (r = roll) then acc+1 else acc) 0 reslist
+
+let weight_num_owned (res, roll) reslist = 
+	(num_owned res reslist) * 4 + (num_dice_owned roll reslist) * 0
+
 (*puts more weight on grain and ore*)
 let weight_loc1 settle num board res_owned inters= 	
 	let ((hexlist, _), _, _, _, _) = board in 
@@ -148,11 +158,11 @@ let weight_loc1 settle num board res_owned inters=
 		 let res_owned' = curlist@res_owned in
 		 match (resource_of_terrain terrain) with
 			| None -> (-1, 1, [], 0)
-			| Some Grain -> (100, 1 + (num_owned Grain res_owned') * 4, [Grain], 2)
-			| Some Lumber -> (50, 1 + (num_owned Lumber res_owned') * 4, [Lumber], 3)
-			| Some Brick -> (40, 1 + (num_owned Brick res_owned') * 4, [Brick], 3)
-			| Some Wool -> (30, 1 + (num_owned Wool res_owned') * 4, [Wool], 2)
-			| Some Ore -> (90, 1 + (num_owned Ore res_owned') * 4, [Ore], 1) in
+			| Some Grain -> (100, 1 + (weight_num_owned (Grain, roll) res_owned'), [Grain, roll], 3)
+			| Some Lumber -> (50, 1 + (weight_num_owned (Lumber, roll) res_owned'), [Lumber, roll], 2)
+			| Some Brick -> (40, 1 + (weight_num_owned (Brick, roll) res_owned'), [Brick, roll], 2)
+			| Some Wool -> (30, 1 + (weight_num_owned (Wool, roll) res_owned'), [Wool, roll], 1)
+			| Some Ore -> (90, 1 + (weight_num_owned (Ore, roll) res_owned'), [Ore, roll], 3) in
 		let acc' = acc' * (expected_of_36 roll import_factor) / div_factor in
 		(acc + acc', res@curlist)
 	) with _ -> (acc, curlist)) (0, []) hexes_gained)
@@ -174,11 +184,11 @@ let weight_loc settle num board res_owned inters=
 		 let res_owned' = curlist@res_owned in
 		 match (resource_of_terrain terrain) with
 			| None -> (-1, 1, [], 0)
-			| Some Grain -> (30, 1 + (num_owned Grain res_owned') * 4, [Grain], 2)
-			| Some Lumber -> (100, 1 + (num_owned Lumber res_owned') * 4, [Lumber], 3)
-			| Some Brick -> (90, 1 + (num_owned Brick res_owned') * 4, [Brick], 3)
-			| Some Wool -> (30, 1 + (num_owned Wool res_owned') * 4, [Wool], 2)
-			| Some Ore -> (10, 1 + (num_owned Ore res_owned') * 4, [Ore], 1) in
+			| Some Grain -> (30, 1 + (weight_num_owned (Grain, roll) res_owned'), [Grain, roll], 2)
+			| Some Lumber -> (70, 1 + (weight_num_owned (Lumber, roll) res_owned'), [Lumber, roll], 3)
+			| Some Brick -> (100, 1 + (weight_num_owned (Brick, roll) res_owned'), [Brick, roll], 3)
+			| Some Wool -> (30, 1 + (weight_num_owned (Wool, roll) res_owned'), [Wool, roll], 2)
+			| Some Ore -> (10, 1 + (weight_num_owned (Ore, roll) res_owned'), [Ore, roll], 1) in
 		let acc' = acc' * (expected_of_36 roll import_factor) / div_factor in
 		(acc + acc', res@curlist)
 	) with _ -> (acc, curlist)) (0, []) hexes_gained)
@@ -188,10 +198,10 @@ let add_res loc reslist board =
 	let ((hexlist, _), _, _, _, _) = board in 
 	let hexes_gained = adjacent_pieces loc in
 	let to_add = List.fold_left (fun acc v -> try
-		let (terrain, _) = List.nth hexlist v in
+		let (terrain, roll) = List.nth hexlist v in
 		match (resource_of_terrain terrain) with
 			| None -> acc
-			| Some x -> x::acc
+			| Some x -> (x,roll)::acc
 	with _ -> acc) [] hexes_gained
 	in reslist := to_add@(!reslist)
 
@@ -319,6 +329,16 @@ let res_needed (b,w,o,g,l) (bn,wn,on,gn,ln) : (resource * int) list =
 	let ls = if (l < ln) then (Lumber, (ln - l))::ls else ls in
 	List.sort (fun (_, a) (_, b) -> b - a) ls
 
+(* Given a settlement list, and an index into that list, determine if the player
+	living there has resources that can be stolen. *)
+let has_resources settles loc plist = 
+	try let settle = List.nth settles loc in match settle with
+		| None -> false
+		| Some (color, _) -> let res = get_res color plist in
+			let (b,w,o,g,l) = res in 
+			b > 0 || w > 0 || o > 0 || g > 0 || l > 0
+	with  _ -> false
+
 
 (* Is a road empty, owned by us, or by someone else? *)
 type road_owner = NoRoad | Us | Them
@@ -338,7 +358,7 @@ let rec trail_to_move (inters, roads) color goal_loc (trail : int list) : object
 	| start_loc::[] -> OTown goal_loc
 	(* Case: not last leg of journey. Build road if needed, otherwise check next part of journey. *)
 	| start_loc::between_loc::n2 -> begin match (road_status color roads (start_loc, between_loc)) with
-		| NoRoad ->  (* let () = print_endline ((string_of_int start_loc)^(string_of_int between_loc)) in *) ORoad (start_loc, between_loc)
+		| NoRoad ->  ORoad (start_loc, between_loc)
 		| Us -> trail_to_move (inters, roads) color goal_loc (between_loc::n2)
 		| Them -> NA
 	end
@@ -361,8 +381,7 @@ let get_init_road ((inters, roads) : structures) res_tiles board color loc plist
 			let valid_options = List.filter (fun (i, _, _) -> i = h) nearby_options in
 			begin match valid_options with
 			  | [] -> choose_move t
-			  | (loc, dis, trail)::_ -> (* let () = print_endline (string_of_int (List.length trail)) in 
-			  	let () = List.fold_left (fun acc i -> print_endline (string_of_int i)) () trail in *)
+			  | (loc, dis, trail)::_ -> 
 			  	trail_to_move (inters, roads) color loc trail
 			  end in
 	let obj = choose_move weighted_locs in match obj with
@@ -422,7 +441,7 @@ let get_init_road ((inters, roads) : structures) res_tiles board color loc plist
 		let goal = List.map (fun (loc, col) -> (loc, col, (get_prob_pick_card color plist need))) goal in
 		let goal = List.sort (fun (_,_,a) (_, _, b) -> b-a) goal in 
 		begin match goal with
-			| (loc, col, _)::_ -> (loc, Some col)
+			| (loc, col, _)::_ -> (* if (has_resources inters loc plist) then *) (loc, Some col) (* else (loc, None) *)
 			| _ -> (0, None) (* Shouldn't happen, we already checked for list length 0. *)
 		end
 
@@ -469,8 +488,8 @@ let get_init_road ((inters, roads) : structures) res_tiles board color loc plist
 		(* let () = print_endline ("need discard: "^(string_of_int num_to_discard)) in *)
 		let sorted_list = List.sort (fun a b -> b - a) (cost_to_list leftovers) in match sorted_list with
 			| h::_ -> let new_hand = choose_from_leftovers (cost_to_list leftovers) h 0 in 
-				(* let (b,w,o,g,l) = new_hand in
-				let () = print_endline ("temp: "^(string_of_int b)^(string_of_int w)^(string_of_int o)^(string_of_int g)^(string_of_int l)) in *)
+				(* let (b,w,o,g,l) = new_hand in *)
+				(* let () = print_endline ("temp: "^(string_of_int b)^(string_of_int w)^(string_of_int o)^(string_of_int g)^(string_of_int l)) in *)
 				subtract_res leftovers new_hand
 			| [] -> (0, 0, 0, 0, 0) (* We have enough in leftovers to discard but it's empty? Should never happen. *)
 	(* If we must discard cards we do need, then discard all the leftovers plus those we do need.
@@ -515,8 +534,7 @@ let town_move ((inters, roads) : structures) res_tiles board (b,w,o,g,l) color p
 			let valid_options = List.filter (fun (i, _, _) -> i = h) nearby_options in
 			begin match valid_options with
 			  | [] -> choose_move t
-			  | (loc, dis, trail)::_ -> (* let () = print_endline (string_of_int (List.length trail)) in 
-			  	let () = List.fold_left (fun acc i -> print_endline (string_of_int i)) () trail in *)
+			  | (loc, dis, trail)::_ -> 
 			  	trail_to_move (inters, roads) color loc trail
 			  end in
 	choose_move weighted_locs
@@ -534,10 +552,35 @@ let city_move (inters, roads) res_tiles board color : objective =
 		| (h, _)::_ -> OCity h
 		| _ -> NA
 
+(* Given a player's color, do they own a settlement
+  on either end of a line? (used mostly for ports)
+    Precondition: line is valid on the map *)
+let owns_port (p1, p2) col inters = 
+  let s1 = List.nth inters p1 and s2 = List.nth inters p2 in
+  let owns_p1 = match s1 with
+    | None -> false
+    | Some (c, _) -> (c = col) and
+      owns_p2 = match s2 with
+    | None -> false
+    | Some (c, _) -> (c = col) in
+  owns_p1 || owns_p2
+
+(* Calculate the best ratio the player can
+use to trade in the given resource. Must be either
+2, 3, or 4. *)
+let calc_best_ratio (ports : port list) inters col : ratio = 
+	List.fold_left (fun best_ratio (line, ratio, port_res) ->
+		let right_type = match port_res with
+			| Any -> true 
+			| PortResource port_res -> false in
+		if (owns_port line col inters) && ratio < best_ratio && right_type then
+		ratio else best_ratio
+	) cMARITIME_DEFAULT_RATIO ports
+
 (* Given the resources we have and those we need,
 	try to get some of the ones we need by whatever means
 	are available (sea trade, player trade, playing cards ,etc) *)
-let try_for_res hexes (inters, rlist) robberloc needo color plist goal:  strategy =
+let try_for_res (hexes, ports) (inters, rlist) robberloc needo color plist goal:  strategy =
 	let (_, (have, cards), _) = get_player color plist in
 	let cards = match cards with | Hidden _ -> [] | Reveal l -> l in
 	let (b, w, o, g, l) = have in 
@@ -582,12 +625,16 @@ let try_for_res hexes (inters, rlist) robberloc needo color plist goal:  strateg
 	if enough_res have cCOST_CARD then
 		SBuildCard else
 
+	(* if enough_res have cCOST_ROAD && get_num_roads color rlist < cMAX_ROADS_PER_PLAYER then
+		SBuildRoad (best_road inters rlist color) else *)
+
 	(* Check for usefulness of maritime trade. *)
-	let trade_res = if (b >= bn + 4) then Some Brick 
-			   else if (w >= wn + 4) then Some Wool 
-			   else if (o >= on + 4) then Some Ore
-			   else if (g >= gn + 4) then Some Grain
-			   else if (l >= ln + 4) then Some Lumber
+	let ratio = calc_best_ratio ports inters color in
+	let trade_res = if (b >= bn + ratio) then Some Brick 
+			   else if (w >= wn + ratio) then Some Wool 
+			   else if (o >= on + ratio) then Some Ore
+			   else if (g >= gn + ratio) then Some Grain
+			   else if (l >= ln + ratio) then Some Lumber
 			   else None in
 	match trade_res with
 		| Some r_have -> begin match res_to_get with

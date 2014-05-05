@@ -119,6 +119,11 @@ let get_settle point inters : intersection =
       | None -> None
       | Some (col, line) -> Some line
 
+  (* Helper function for longest road that filters first. *)
+  let longest_road' c roads inters = 
+    let roads = List.filter (fun (col, _) -> col = c) roads in
+    longest_road c roads inters
+
    (* Takes a resource hand and a desired res,
       removes all of that resource from the hand,
       returns the new hand and the # resources removed. *)

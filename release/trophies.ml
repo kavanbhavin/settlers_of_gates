@@ -1,12 +1,13 @@
 open Definition
 open Constant
 open Util
+open Own_util
 
 (* Updates the current owner of the longest road trophy.
 	To be called anytime a road is built. *)
 let update_longest_road plist (inters, roads) = 
 	let proads = List.map (fun (pcol, phand, ptroph) -> 
-		let numroads = longest_road pcol roads inters in
+		let numroads = longest_road' pcol roads inters in
 		((pcol, phand, ptroph), numroads)) plist in 
 	let winner = List.fold_left (fun acc ((pcol, _, _), numroads) ->
 		match acc with

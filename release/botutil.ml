@@ -93,8 +93,8 @@ let weight_loc settle num board res_owned inters=
 		 match (resource_of_terrain terrain) with
 			| None -> (-1, 1, [], 0)
 			| Some Grain -> (30, 1 + (num_owned Grain res_owned') * 4, [Grain], 2)
-			| Some Lumber -> (100, 1 + (num_owned Lumber res_owned') * 4, [Lumber], 3)
-			| Some Brick -> (90, 1 + (num_owned Brick res_owned') * 4, [Brick], 3)
+			| Some Lumber -> (80, 1 + (num_owned Lumber res_owned') * 4, [Lumber], 3)
+			| Some Brick -> (100, 1 + (num_owned Brick res_owned') * 4, [Brick], 3)
 			| Some Wool -> (30, 1 + (num_owned Wool res_owned') * 4, [Wool], 2)
 			| Some Ore -> (10, 1 + (num_owned Ore res_owned') * 4, [Ore], 1) in
 		let acc' = acc' * (expected_of_36 roll import_factor) / div_factor in

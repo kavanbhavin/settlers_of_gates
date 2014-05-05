@@ -118,7 +118,7 @@ let sorted_distances inters= let fid = fill_in_distances inters
 in let check_order = let bools = List.mapi (fun i a -> match a with 
 					| CanBuild (j, _) 
 					| DistanceToNearest (j, _, _) -> i=j ) fid
-in List.fold_left (fun acc ele -> acc && ele) true bools in if check_order then (Printf.printf "order was correct"; fid) 
+in List.fold_left (fun acc ele -> acc && ele) true bools in if check_order then ((*Printf.printf "order was correct"; *) fid) 
 else failwith "incorrect order" (*((Printf.printf "order was incorrect"); List.sort (fun a b -> 
 	begin match (a,b) with 
 		| (CanBuild i, CanBuild j) 
