@@ -43,7 +43,7 @@ let do_robber_move (active_player: color) ((piece: piece), color) (structs: stru
 				| Some color_to_rob -> 
 					if not(color_exists piece structs color_to_rob) 
 					then ((Printf.printf "tried to rob %s but no such color exists" (string_of_color color_to_rob)); None)
-					else if color = active_player
+					else if color_to_rob = active_player
 					then ((Printf.printf "tried to rob himself"); None)
 					else let plist' = (List.map (fun (color', (inventory, cards), trophies) ->
 					if color'= color_to_rob

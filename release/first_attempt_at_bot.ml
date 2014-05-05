@@ -66,11 +66,11 @@ let have_enough_resources_card (b,w,o,g,l) =
 let have_enough_resources_road (b,w,o,g,l) = 
 	let (bn, wn, on, gn, ln) = cCOST_ROAD in 
 	b >= bn && w >= wn && o >= on && g >= gn && l >= ln
-let find_road rlist intersections my_color = let my_rlist = List.filter (fun (c, _ ) -> if c = my_color then true else false) rlist
+(*let find_road rlist intersections my_color = let my_rlist = List.filter (fun (c, _ ) -> if c = my_color then true else false) rlist
 		in match my_rlist with 
 			| (c, (p1, p2))::tl -> let other = best_road_from_point p2 intersections rlist
 		in (Printf.printf "returning road %d to %d\n" p2 other; (p2, other))
-			| _ -> failwith "noroads"
+			| _ -> failwith "noroads"*)
 let rec play_valid_card cards plist c structures= 
 	match cards with 
 		| hd::tl -> 

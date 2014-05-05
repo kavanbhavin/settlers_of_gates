@@ -6,7 +6,7 @@ type own_point = CanBuild of int * int | DistanceToNearest of (int * int * int)
 (*first two ints represent road in both cases*)
 type own_road = RoadCanBuild of (int * int * int) | RoadDistanceToNearest of (int * int * int * int)
 
-let board_points = let rec helper n acc = 
+let board_points : int list= let rec helper n acc = 
 	if n = (-1)
 	then acc 
 	else helper (n-1) (n::acc) 
@@ -62,13 +62,16 @@ in (Hashtbl.add h (smaller, bigger) distance); distance
         | None -> false
         | Some _ -> true)) false neighbors
 
-let should_build_road point inters = let point_is_empty = match (List.nth inters point) with 
+let should_build_road (point : point) (inters : intersection list) : bool = let point_is_empty = match (List.nth inters point) with 
 				| None -> true 
 				| _ -> false 
 			in point_is_empty && (not(settle_one_away point inters))
 
-let convert_to_our_type inters= 
-	List.map (fun i-> if should_build_road i inters then CanBuild (i, 0) else DistanceToNearest (i,0,0) ) board_points
+let convert_to_our_type (inters :intersection list) : own_point list= 
+	List.map (fun (i : int)-> 
+		if (should_build_road i inters) 
+		then CanBuild (i, 0) 
+	else DistanceToNearest (i,0,0)) board_points
 
 let only_free_and_buildable_points inters : own_point list = 
 	List.filter (fun a -> 
@@ -171,7 +174,7 @@ in match asd with
 
 (* returns the best points on the board according to this density based strategy *)
 
-let best_roads inters rlist own_color : point = let entire_map = sorted_distances inters 
+let best_roads inters rlist own_color : point list = let entire_map = sorted_distances inters 
 	in let entire_map_sorted = List.sort (fun a b-> 
 	match (a,b) with 
 		| (CanBuild (i,j), CanBuild (k,l)) -> if j  = l then  0 else if j<l then (-1) else 1 

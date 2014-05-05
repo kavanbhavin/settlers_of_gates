@@ -16,7 +16,7 @@ let main =
     let b4 = Registry.bot_of_name args.(4) in
     let _ = Print.set_names (args.(1), args.(2), args.(3), args.(4)) in
     if num_args = 4 then
-    (* (for i=1 to 100 do *)ignore(Play.play_game b1 b2 b3 b4) (*done)*)
+    ignore(Play.play_game b1 b2 b3 b4)
     else if num_args >= 5 then
       let n = int_of_string args.(5) in
       let _ = 
