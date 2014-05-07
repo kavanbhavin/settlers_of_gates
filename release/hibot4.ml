@@ -2,7 +2,7 @@ open Definition
 open Registry
 open Constant
 open Util
-open Bot_util_3
+open Bot_util_4
 
 (** Give your bot a 2-20 character name. *)
 let name = "hibot4"
@@ -18,11 +18,15 @@ module Bot = functor (S : Soul) -> struct
   (* A running list of which resources we own generator tiles for. *)
   let (res_tiles : (resource * int) list ref) = ref []
 
+   (* Whether it's time to buy a card or not. *)
+  let need_card = ref false
+
   (* If you use side effects, start/reset your bot for a new game *)
   let initialize () = 
     (res_tiles := []);
      goal:=NA;
-     res_needed:=(0,0,0,0,0)
+     res_needed:=(0,0,0,0,0);
+     need_card:=false
 
   (* Uses weightings from botutil to pick an initial move. *)
   let choose_init_move (inters, roads) board color  plist: line = 
@@ -77,8 +81,31 @@ module Bot = functor (S : Soul) -> struct
         DiscardMove (get_discard_res (get_res color plist) !res_needed)
       | TradeRequest -> TradeResponse(false)
       | ActionRequest -> 
+
+        (if (!goal = NA && !need_card) then goal:=OCard);
+
+          (* If trying to build another knight for trophy, then... *)
+          (* (if (!goal = NA && (get_num_vp color plist (inters, roads)) >= cWIN_CONDITION-2 && not (have_largest_army plist (inters, roads) color)
+          && (delta_largest_army plist (inters, roads) color) <= 1) then
+            goal:=OCard else ()); *)
+
+           (* If trying to get another road for trophy, then *)
+             let potent_road = ref (color, (0, 0)) in
+            (* let (_, (have, cards), _) = get_player color plist in *)
+
+            let () = potent_road:= (if (!goal = NA) && get_num_roads color roads < cMAX_ROADS_PER_PLAYER &&
+               get_num_vp color plist (inters, roads) >= cWIN_CONDITION - 5 && not (have_longest_road plist (inters, roads) color)
+               && (delta_longest_road plist (inters, roads) color) <= 2
+                then match (extend_road color (inters, roads)) with
+                | None -> (color, (0, 0))
+                | Some r -> r else (color, (0, 0))) in
+
+            (if (!potent_road <> (color, (0, 0))) then
+              let (_, (a, b)) = !potent_road in
+              goal:= (ORoad (a, b)) else ());        
+
           (* If we can still build another town, set this as next objective. *)
-          (if (get_num_settles color inters Town) < cMAX_TOWNS_PER_PLAYER then
+          (if (!goal = NA) && (get_num_settles color inters Town) < cMAX_TOWNS_PER_PLAYER then
           town_builder structs board color plist else ()); 
           (* If not, but we can still build a city, set this as the next objective. *)
           (if (!goal = NA) && (get_num_settles color inters City) < cMAX_CITIES_PER_PLAYER then
@@ -93,7 +120,7 @@ module Bot = functor (S : Soul) -> struct
             match try_for_res map structs robber !res_needed color plist !goal with
               | SPlayerTrade (i, c1, c2) -> default_action turn
               | SMaritimeTrade (res1, res2) -> Action (MaritimeTrade (res1, res2))
-              | SBuildCard -> Action (BuyBuild BuildCard)
+              | SBuildCard -> (need_card:=false);Action (BuyBuild BuildCard)
               | SPlayYoP (r1, r2) -> Action (PlayCard (PlayYearOfPlenty (r1, Some r2)))
               | SPlayMonopoly r1 -> Action (PlayCard (PlayMonopoly r1))
               | SPlayKnight mov -> Action (PlayCard (PlayKnight mov))
@@ -109,6 +136,7 @@ module Bot = functor (S : Soul) -> struct
             | OCard -> if (can_afford CardBuy color plist) then
                 let () = goal:=NA in
                 let () = res_needed:=(0,0,0,0,0) in 
+                let () = need_card:=false in
                 Action (BuyBuild (BuildCard)) else default_action turn
             | OCity loc -> if (can_afford CityBuy color plist) then
                 let () = goal:=NA in
