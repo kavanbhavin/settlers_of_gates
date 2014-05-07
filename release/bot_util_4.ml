@@ -732,10 +732,11 @@ let try_for_res (hexes, ports) (inters, rlist) robberloc needo color plist goal:
 		if (needo=cCOST_ROAD) && num_roads < cMAX_ROADS_PER_PLAYER 
 		then	if num_roads = (cMAX_ROADS_PER_PLAYER - 1)
 				then match goal with 
-						| ORoad (p1,p2) -> SPlayRoadBuild ((color, (p1,p2)), None)
+						| ORoad (p1,p2) -> if (valid_pair (p1, p2)) then SPlayRoadBuild ((color, (p1,p2)), None) else failwith "invalid pair in first oroad"
 						| _ -> SPlayRoadBuild ((best_road inters rlist color), None) 
 				else match goal with
-						| ORoad (p1, p2) -> SPlayRoadBuild ((color, (p1, p2)), Some (best_road inters rlist color)) 
+						| ORoad (p1, p2) -> if (valid_pair (p1, p2)) then SPlayRoadBuild ((color, (p1, p2)), Some (best_road inters ((color, (p1,p2))::rlist) color)) 
+					else failwith "invalid pair in second oroad"
 						| _ -> NoStrategy (* should never happen! *)
 		else if num_roads < cMAX_ROADS_PER_PLAYER
 			then 	if num_roads = (cMAX_ROADS_PER_PLAYER - 1)
@@ -795,3 +796,16 @@ let try_for_res (hexes, ports) (inters, rlist) robberloc needo color plist goal:
 
 	(* We have tried everything, just give up. *)
 	NoStrategy
+
+let get_num_each_resource hex_list = 
+	let resources = List.map (fun (t,r) -> resource_of_terrain t) hex_list
+in List.fold_left (fun (b,w,o,g,l) ele-> 
+	match ele with  
+		| Some Brick -> (b+1, w, o, g, l)
+		| Some Wool -> (b, w+1, o, g, l)
+		| Some Ore -> (b, w, o+1, g, l)
+		| Some Grain -> (b, w, o, g+1, l)
+		| Some Lumber -> (b, w, o, g, l+1)
+		| None -> (b, w, o, g, l)) (0,0,0,0,0) resources
+
+

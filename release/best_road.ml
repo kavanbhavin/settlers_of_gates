@@ -21,7 +21,7 @@ in match ls' with
 (* uses an array, that is indexed by points, to compute road distance between two points. 
 The array is set to true for every point that has been seen already. *)
 let distance_between_points_array p1 p2 = 
-	let rec helper p acc distance = 
+	let distance = (let rec helper p acc distance = 
 		if acc.(p) = true then distance
 	else let lop = ref [] in 
 	for i=0 to ((Array.length acc)-1) do 
@@ -31,16 +31,16 @@ else ()
 done; (List.iter (fun element -> acc.(element) <- true) !lop); 
 helper p acc (distance+1)
 in let init_array = Array.make cNUM_POINTS false in (init_array.(p2) <- true); 
-helper p1 init_array 0  
+helper p1 init_array 0  ) in if distance < cNUM_POINTS then distance else failwith "bogus distance"
 
 
 (* extremely slow (but functional) implementation of distance between points function *)
 let distance_between_points p1 p2 =
-	let rec helper p lop distance = 
+	try (let rec helper p lop distance = 
 		if List.mem p lop 
 		then distance
 		else helper p (remove_duplicates (List.flatten (List.map adjacent_points lop))) (distance+1)
-	in helper p1 [p2] 1  
+	in helper p1 [p2] 1) with _ -> failwith "failure in distance in list points"
 
 
 let memoized_distance = 
@@ -56,11 +56,11 @@ in (Hashtbl.add h (smaller, bigger) distance); distance
 (* Returns true if there exists a settlement
     < 2 road lengths away from point. *)
   let settle_one_away point inters: bool = 
-    let neighbors = adjacent_points point in
+    try (let neighbors = adjacent_points point in
     List.fold_left (fun acc v ->
       acc || (match (List.nth inters v) with
         | None -> false
-        | Some _ -> true)) false neighbors
+        | Some _ -> true)) false neighbors) with _ -> failwith "failure in settle_one_away"
 
 let should_build_road (point : point) (inters : intersection list) : bool = let point_is_empty = match (List.nth inters point) with 
 				| None -> true 
@@ -129,8 +129,8 @@ else failwith "incorrect order" (*((Printf.printf "order was incorrect"); List.s
 *)
 
 (*Given a point, returns the list of possible roads in own type.*)
-let best_road_from_point inters rlist p : own_road list = let already_built_roads_from_point = 
-	List.fold_left (fun acc (_, (p1,p2)) ->
+let best_road_from_point inters rlist p : own_road list =  
+	try (let already_built_roads_from_point = List.fold_left (fun acc (_, (p1,p2)) ->
 	 if p1=p then p2::acc else if p2=p then p1::acc else acc) [] rlist 
 in let s = (sorted_distances inters) 
 in let our_type = List.map (fun a -> List.nth s a) (adjacent_points p) 
@@ -139,7 +139,8 @@ in let our_type_with_built_roads_removed = List.filter (fun a -> match a with
 			| DistanceToNearest (i, _ , _ ) -> not(List.mem i already_built_roads_from_point)) our_type
 	in List.map (fun a -> match a with 
 		| CanBuild (i, j) -> RoadCanBuild (p,i, j)
-		| DistanceToNearest (i,j,k) -> RoadDistanceToNearest (p,i,j,k) ) our_type_with_built_roads_removed
+		| DistanceToNearest (i,j,k) -> RoadDistanceToNearest (p,i,j,k) ) our_type_with_built_roads_removed)
+with _ -> (Printf.printf "invalid point %d" p); failwith "asf"
 	(*let asd = List.fold_left (fun (acc : own_point) (ele : own_point) -> 
 	match (acc, ele) with 
 		| (CanBuild (i,j), CanBuild (k,l)) -> if j <l then acc else ele  
@@ -151,13 +152,44 @@ in let our_type_with_built_roads_removed = List.filter (fun a -> match a with
 in match asd with 
 | CanBuild (i, _) -> i 
 | DistanceToNearest (j, _, _) -> j*)
+let road_exists (r1, r2) rlist : bool = 
+  	List.exists (fun (r1', r2') -> ((r1 = r1' && r2 = r2') || (r1 = r2' && r2 = r1'))) rlist
+  let real_road_exists (r1, r2) rlist : bool = 
+  	List.exists (fun (_, (r1', r2')) -> ((r1 = r1' && r2 = r2') || (r1 = r2' && r2 = r1'))) rlist
+(* Returns a list of all possible roads that color can build. *)
+let all_possible_roads ((inters, roads) : structures) color : (int * int) list = 
+	let settlesi = (List.mapi (fun i valu -> (valu, i)) inters) in
+	(* Get all roads possible on the map. *)
+	let all_roads = List.fold_left (fun acc (_, i) ->
+		let adj = adjacent_points i in
+		(List.fold_left (fun acc' b ->
+			if (real_road_exists (i, b) roads)  || (road_exists (i,b) acc') then acc'
+			else (i, b)::acc') acc adj)) [] settlesi in
+	(* Is a town either owned by us or empty? *)
+	let town_checks n = match ((List.nth inters n) : intersection) with
+		| None -> true
+		| Some (c, _) -> c = color in
+	(* Filter all possible roads to just the ones we can build. *)
+	let possible_roads = List.filter (fun (a, b) ->
+		(List.fold_left (fun acc (r_c, (r_s, r_e)) -> 
+    		acc || (((r_s = a) || (r_e = a)) && r_c = color && (town_checks a))) false roads  || 
+		List.fold_left (fun acc (r_c, (r_s, r_e)) -> 
+    		acc || (((r_s = b) || (r_e = b)) && r_c = color && (town_checks b))) false roads)) all_roads
+	in
+	possible_roads
 
+let remove_other_roads (possible_roads : own_road list) (rlist: road list) own_color inters = 
+	let all_roads = all_possible_roads (inters, rlist) own_color
+in  List.filter (fun a -> 
+	match a with 
+		| RoadCanBuild (p1, p2, _) 
+		| RoadDistanceToNearest (p1, p2, _, _) -> (List.mem (p1,p2) all_roads || List.mem (p2,p1) all_roads) ) possible_roads
 (* simply returns the best road using this density based strategy*)
 let best_road inters rlist own_color : road= 
 	let my_roads = List.filter (fun (color, line) -> color = own_color) rlist
 	in let points_to_build_from = remove_duplicates (List.fold_left (fun acc (color, (p1,p2)) -> 
 	p1::p2::acc) [] my_roads)
-	in let possible_roads = List.flatten (List.map (best_road_from_point inters rlist) points_to_build_from)
+	in let possible_roads = remove_other_roads (List.flatten (List.map (best_road_from_point inters rlist) points_to_build_from)) rlist own_color inters
 	in let asd = List.fold_left (fun (best_road : own_road) (ele : own_road) -> 
 	match (best_road, ele) with 
 		| (RoadCanBuild (_,_,j), RoadCanBuild (_,_,l)) -> if j <l then best_road else ele  
@@ -168,6 +200,10 @@ let best_road inters rlist own_color : road=
 	(RoadDistanceToNearest ((-100), 1, cNUM_POINTS, cNUM_POINTS)) possible_roads
 in match asd with 
 	| RoadCanBuild (p1, p2, _) -> (own_color, (p1, p2))
+	| RoadDistanceToNearest ((-100), 1, _, _) -> begin match all_possible_roads (inters, rlist) own_color with 
+														| hd::tl -> (Printf.printf "road was possible but best_road didn't find it"); (own_color, hd)
+														| [] -> (Printf.printf "no roads left"); (own_color, (1,1))
+													end 
 	| RoadDistanceToNearest (p1, p2, _, _) -> (own_color, (p1, p2)) 
 
 (* settlement, settlement location, weight sorted so first one is the best *)
