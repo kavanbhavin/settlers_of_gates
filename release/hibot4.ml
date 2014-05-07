@@ -87,6 +87,7 @@ module Bot = functor (S : Soul) -> struct
           (* If trying to build another knight for trophy, then... *)
           (if (!goal = NA && (get_num_vp color plist (inters, roads)) >= cWIN_CONDITION-4 && not (have_largest_army plist (inters, roads) color)
           && (delta_largest_army plist (inters, roads) color) <= 2) then
+          
             goal:=OCard else ()); 
 
            (* If trying to get another road for trophy, then *)
@@ -102,7 +103,7 @@ module Bot = functor (S : Soul) -> struct
 
             (if (!potent_road <> (color, (0, 0))) then
               let (_, (a, b)) = !potent_road in
-              goal:= (ORoad (a, b)) else ());        
+              goal:= (ORoad (a, b)) else ());       
 
           (* If we can still build another town, set this as next objective. *)
           (if (!goal = NA) && (get_num_settles color inters Town) < cMAX_TOWNS_PER_PLAYER then

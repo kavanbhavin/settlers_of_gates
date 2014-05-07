@@ -12,6 +12,7 @@ open Trophies
 let min_valid_init (map, structs, deck, discard, robber) color plist= 
     let (inters, roads) = structs in 
     let ipairs = List.mapi (fun i v -> (v, i)) inters in 
+    let ipairs = randomize ipairs in
     (* Returns the first intersection that has an empty road
       adjacent to it. *)
     let lst = (List.filter (fun (inter, i) -> begin match inter with

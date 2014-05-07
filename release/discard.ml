@@ -5,16 +5,38 @@ open Own_util
 open Robber
 (*make sure the person has enough cards before discard*)
 
+ (* Randomly tries to discard cards until it has enough.
+  Will probably loop forever if the player doesn't actually have
+  enough resources, but this probably hopefully shouldn't happen. *)
+ let rec min_valid_discard' num (b,w,o,g,l) (bd,wd,od,gd,ld) curr : cost = 
+  let discarded = (bd,wd,od,gd,ld) in
+  if (curr = num) then discarded else
+  let el = match (pick_random [Brick;Wool;Ore;Grain;Lumber]) with
+    | None -> failwith "impossible"
+    | Some x -> x in
+  match el with
+    | Brick -> if b = 0 then min_valid_discard' num (b,w,o,g,l) discarded curr else
+      min_valid_discard' num (b, w, o, g, l) (bd+1, wd, od, gd, ld) (curr+1)
+    | Wool -> if w = 0 then min_valid_discard' num (b,w,o,g,l) discarded curr else
+      min_valid_discard' num (b, w-1, o, g, l) (bd, wd+1, od, gd, ld) (curr+1)
+    | Ore -> if o = 0 then min_valid_discard' num (b,w,o,g,l) discarded curr else
+      min_valid_discard' num (b, w, o-1, g, l) (bd, wd, od+1, gd, ld) (curr+1)
+    | Grain -> if g = 0 then min_valid_discard' num (b,w,o,g,l) discarded curr else
+      min_valid_discard' num (b, w, o, g-1, l) (bd, wd, od, gd+1, ld) (curr+1)
+    | Lumber -> if l = 0 then min_valid_discard' num (b,w,o,g,l) discarded curr else
+      min_valid_discard' num (b, w, o, g, l-1) (bd, wd, od, gd, ld+1) (curr+1)
 
 (* Given the number of cards we need to discard
    and the player's hand, return a minimum valid discard move *)
 let min_valid_discard num inventory = 
-  let ls = snd (List.fold_right (fun v (sum, acc) -> 
+  (* let ls = snd (List.fold_right (fun v (sum, acc) -> 
     if sum = num then (sum, 0::acc) else
     if (v + sum) <= num then ((v + sum), v::acc) else
       let num_discard = num - sum in 
       (num, num_discard::acc)) (list_of_resources inventory) (0, [])) in 
-  resources_of_list ls
+  resources_of_list ls *)
+  let discarded = min_valid_discard' num inventory (0, 0, 0, 0, 0) 0 in
+  discarded
 
 let need_to_discard color plist : bool = 
   let (color, ((bh, wh, oh, gh, lh), cards), trophies) = try List.find (fun (c, _, _) ->

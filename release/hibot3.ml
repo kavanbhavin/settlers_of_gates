@@ -124,7 +124,6 @@ module Bot = functor (S : Soul) -> struct
         
 end
 
-
 (* Do not change *)
 let _ = register_bot name
   (module Bot(New)) (module Bot(New)) (module Bot(New)) (module Bot(New))
