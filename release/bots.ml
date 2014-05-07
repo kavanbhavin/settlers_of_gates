@@ -6,5 +6,4 @@ open Bot2
 open Hibot_v2
 open Hibot3
 open Hibot4
-open Hibot5
-open Hibot6
+open Hibot7

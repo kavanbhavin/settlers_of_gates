@@ -21,7 +21,7 @@ let build_settlement (inters, rlist) p1 color settle_type : structures =
 
 let build_road (inters, rlist) line color plist : structures * (player list) = 
   if (not (empty_road line rlist)) then 
-    failwith "Trying to override road"
+    ((inters, rlist), plist)
   else 
   	let structs' = (inters, ((color, line)::rlist)) in
   	let plist' = update_longest_road plist structs' in
