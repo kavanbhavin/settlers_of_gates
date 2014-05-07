@@ -56,7 +56,7 @@ let play_game (module B : BOT) (module R : BOT) (module O : BOT) (module W : BOT
     sleep s cSTEP_TIME;
     match winner with
       | None -> if turns < cMAX_TURNS then play s turns else let _ = print_draw() in None
-      | Some c -> print_winner c; Some c
+      | Some c -> (*print_winner c;*) Some c
   in
   let _ = B.initialize(); R.initialize(); O.initialize(); W.initialize() in
     play (Game.state_of_game (Game.init_game())) 0

@@ -65,7 +65,7 @@ let close_to_win_vp = 7
 let any_player_close_to_winning plist structures = List.fold_left (fun acc (color, hand, trophy) -> 
 	if get_num_vp color plist structures >= close_to_win_vp then true else acc) false plist 
 
-let change_phase_ratio : float = 0.3
+let change_phase_ratio : float = 0.18
 
 let which_phase (inters, rlist) plist = if any_player_close_to_winning plist (inters, rlist)
 	then Late else if (ratio_of_settlements inters) > change_phase_ratio then Middle else Early
@@ -399,6 +399,11 @@ let get_init_road ((inters, roads) : structures) res_tiles board color loc plist
  	 | OCard -> cCOST_CARD
  	 | ORoad _ -> cCOST_ROAD
 
+let color_has_resource color plist = 
+	List.fold_left (fun acc (color', (inventory, cards), trophies) -> 
+	if color'=color then (sum_cost inventory) > 0 || acc 
+	else acc) false plist
+
  (* Given a player, return the probability that we will randomly
  	pick one of the resources we need from them. *)
  let get_prob_pick_card color plist need =
@@ -415,8 +420,9 @@ let get_init_road ((inters, roads) : structures) res_tiles board color loc plist
  	let float_num = float_of_int (!tot_valid) /. (float_of_int tot_cards) in
  	(* Scale this to a comparable int. *)
  	let float_scaled = float_num *. 100. in
- 	(int_of_float float_scaled)
-
+ 	let temp = int_of_float float_scaled in 
+ 	let temp = if (color_has_resource color plist) then temp+1 else temp in
+ 	temp
 
  (* Pick a robber move to play. *)
  let get_robber_move hexes inters color robber_loc plist need=
@@ -438,10 +444,10 @@ let get_init_road ((inters, roads) : structures) res_tiles board color loc plist
  		| _::_ -> 
  	(* We have found a nonempty list of people we can steal from, now sort them by possibility of getting
  		something that we need if we randomly robbed them. *)
-		let goal = List.map (fun (loc, col) -> (loc, col, (get_prob_pick_card color plist need))) goal in
+		let goal = List.map (fun (loc, col) -> (loc, col, (get_prob_pick_card col plist need))) goal in
 		let goal = List.sort (fun (_,_,a) (_, _, b) -> b-a) goal in 
 		begin match goal with
-			| (loc, col, _)::_ -> (* if (has_resources inters loc plist) then *) (loc, Some col) (* else (loc, None) *)
+			| (loc, col, w)::_ -> if (color_has_resource col plist) then (loc, Some col)  else  (loc, None) 
 			| _ -> (0, None) (* Shouldn't happen, we already checked for list length 0. *)
 		end
 
@@ -462,6 +468,7 @@ let get_init_road ((inters, roads) : structures) res_tiles board color loc plist
  	match goal with
  		| Some v -> (v, None)
  		| None -> (0, None) (* Default move : should never happen. *)
+
 
  (* Given a cost, remove negative values. *)
  let normalize (b,w,o,g,l) : cost = 

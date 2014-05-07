@@ -7,7 +7,7 @@ type phase = Early | Middle | Late
   type objective = NA | OTown of int | OCity of int | OCard | ORoad of int * int
   type to_buy = RoadBuy | TownBuy | CityBuy | CardBuy
   type strategy = SPlayerTrade of int * cost * cost | SMaritimeTrade of resource * resource | SBuildCard | NoStrategy
-  	| SPlayYoP of resource * resource | SPlayMonopoly of resource | SPlayKnight of robbermove | SPlayRoadBuild of int * int
+  	| SPlayYoP of resource * resource | SPlayMonopoly of resource | SPlayKnight of robbermove | SPlayRoadBuild of road * road option
   	| SBuildRoad of road
 
 (* Returns "player col owns a road with one point
@@ -727,15 +727,24 @@ let try_for_res (hexes, ports) (inters, rlist) robberloc needo color plist goal:
 
 	(* If we have some cards, see if they would be useful. *)
 	let rb_strat = if (List.mem RoadBuilding cards) then
-		let num_towns = get_num_settles color inters Town in
-		let num_cities = get_num_settles color inters City in
-		if (needo=cCOST_ROAD) then match goal with
-			| ORoad (p1, p2) -> SPlayRoadBuild (p1, p2)
-			| _ -> NoStrategy (* should never happen! *)
-		else if (num_towns >= cMAX_TOWNS_PER_PLAYER && num_cities >= cMAX_CITIES_PER_PLAYER
-			&& (get_num_roads color rlist) <= cMAX_ROADS_PER_PLAYER) then 
-		(* insert logic for building road after main construction phase here *) NoStrategy
-	else NoStrategy else NoStrategy in
+	let num_roads = get_num_roads color rlist 
+	in 
+		if (needo=cCOST_ROAD) && num_roads < cMAX_ROADS_PER_PLAYER 
+		then	if num_roads = (cMAX_ROADS_PER_PLAYER - 1)
+				then match goal with 
+						| ORoad (p1,p2) -> SPlayRoadBuild ((color, (p1,p2)), None)
+						| _ -> SPlayRoadBuild ((best_road inters rlist color), None) 
+				else match goal with
+						| ORoad (p1, p2) -> SPlayRoadBuild ((color, (p1, p2)), Some (best_road inters rlist color)) 
+						| _ -> NoStrategy (* should never happen! *)
+		else if num_roads < cMAX_ROADS_PER_PLAYER
+			then 	if num_roads = (cMAX_ROADS_PER_PLAYER - 1)
+					then SPlayRoadBuild ((best_road inters rlist color), None) 
+					else let first_road = best_road inters rlist color 
+					in SPlayRoadBuild (first_road, Some (best_road inters (first_road::rlist) color)) 
+			else NoStrategy 
+		else NoStrategy
+	in
 	match rb_strat with
 		| SPlayRoadBuild (p1, p2) -> SPlayRoadBuild (p1, p2)
 		| _ ->

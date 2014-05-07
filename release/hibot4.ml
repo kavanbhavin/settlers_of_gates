@@ -85,9 +85,9 @@ module Bot = functor (S : Soul) -> struct
         (if (!goal = NA && !need_card) then goal:=OCard);
 
           (* If trying to build another knight for trophy, then... *)
-          (* (if (!goal = NA && (get_num_vp color plist (inters, roads)) >= cWIN_CONDITION-2 && not (have_largest_army plist (inters, roads) color)
-          && (delta_largest_army plist (inters, roads) color) <= 1) then
-            goal:=OCard else ()); *)
+          (if (!goal = NA && (get_num_vp color plist (inters, roads)) >= cWIN_CONDITION-4 && not (have_largest_army plist (inters, roads) color)
+          && (delta_largest_army plist (inters, roads) color) <= 2) then
+            goal:=OCard else ()); 
 
            (* If trying to get another road for trophy, then *)
              let potent_road = ref (color, (0, 0)) in
@@ -124,7 +124,7 @@ module Bot = functor (S : Soul) -> struct
               | SPlayYoP (r1, r2) -> Action (PlayCard (PlayYearOfPlenty (r1, Some r2)))
               | SPlayMonopoly r1 -> Action (PlayCard (PlayMonopoly r1))
               | SPlayKnight mov -> Action (PlayCard (PlayKnight mov))
-              | SPlayRoadBuild (p1, p2) -> Action (PlayCard (PlayRoadBuilding ((color, (p1, p2)), None)))
+              | SPlayRoadBuild (x,y) -> Action (PlayCard (PlayRoadBuilding (x,y)))
               | SBuildRoad r -> Action (BuyBuild (BuildRoad r))
               | NoStrategy -> default_action turn
         else 
