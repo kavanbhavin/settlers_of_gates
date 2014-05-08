@@ -10,6 +10,18 @@ type phase = Early | Middle | Late
   	| SPlayYoP of resource * resource | SPlayMonopoly of resource | SPlayKnight of robbermove | SPlayRoadBuild of road * road option
   	| SBuildRoad of road
 
+(*returns the number of points generating the a resource on the board*)  	
+let get_num_each_resource hex_list : cost = 
+	let resources = List.map (fun (t,r) -> resource_of_terrain t) hex_list
+in List.fold_left (fun (b,w,o,g,l) ele-> 
+	match ele with  
+		| Some Brick -> (b+1, w, o, g, l)
+		| Some Wool -> (b, w+1, o, g, l)
+		| Some Ore -> (b, w, o+1, g, l)
+		| Some Grain -> (b, w, o, g+1, l)
+		| Some Lumber -> (b, w, o, g, l+1)
+		| None -> (b, w, o, g, l)) (0,0,0,0,0) resources
+
 (* Returns "player col owns a road with one point
     on point." *)
 let own_road_with_point point col roads : bool = 
@@ -119,7 +131,7 @@ let close_to_win_vp = 7
 let any_player_close_to_winning plist structures = List.fold_left (fun acc (color, hand, trophy) -> 
 	if get_num_vp color plist structures >= close_to_win_vp then true else acc) false plist 
 
-let change_phase_ratio : float = 0.3
+let change_phase_ratio : float = 0.35
 
 let which_phase (inters, rlist) plist = if any_player_close_to_winning plist (inters, rlist)
 	then Late else if (ratio_of_settlements inters) > change_phase_ratio then Middle else Early
@@ -204,19 +216,20 @@ let weight_loc1 settle num board res_owned inters=
 	match settle with
 		| Some _ -> 0
 		| None ->
-	if (settle_one_away num inters) then 0 else 
+	if (settle_one_away num inters) then 0 else
+	let (bnum, wnum, onum, gnum, lnum) = get_num_each_resource hexlist in
 	let hexes_gained = adjacent_pieces num in
 	fst (List.fold_left (fun (acc, curlist) hex_gained ->
 		try (let (terrain,roll) = List.nth hexlist hex_gained in
-		let (acc', div_factor, res, import_factor) =
+	 let (acc', div_factor, res, import_factor) =
 		 let res_owned' = curlist@res_owned in
 		 match (resource_of_terrain terrain) with
 			| None -> (-1, 1, [], 0)
-			| Some Grain -> (100, 1 + (weight_num_owned (Grain, roll) res_owned'), [Grain, roll], 3)
-			| Some Lumber -> (50, 1 + (weight_num_owned (Lumber, roll) res_owned'), [Lumber, roll], 2)
-			| Some Brick -> (40, 1 + (weight_num_owned (Brick, roll) res_owned'), [Brick, roll], 2)
-			| Some Wool -> (30, 1 + (weight_num_owned (Wool, roll) res_owned'), [Wool, roll], 1)
-			| Some Ore -> (90, 1 + (weight_num_owned (Ore, roll) res_owned'), [Ore, roll], 3) in
+			| Some Grain -> ((gnum*25), 1 + (weight_num_owned (Grain, roll) res_owned'), [Grain, roll], 3)
+			| Some Lumber -> ((lnum*12), 1 + (weight_num_owned (Lumber, roll) res_owned'), [Lumber, roll], 2)
+			| Some Brick -> ((bnum*13), 1 + (weight_num_owned (Brick, roll) res_owned'), [Brick, roll], 2)
+			| Some Wool -> ((wnum*17), 1 + (weight_num_owned (Wool, roll) res_owned'), [Wool, roll], 1)
+			| Some Ore -> ((onum*30), 1 + (weight_num_owned (Ore, roll) res_owned'), [Ore, roll], 3) in
 		let acc' = acc' * (expected_of_36 roll import_factor) / div_factor in
 		(acc + acc', res@curlist)
 	) with _ -> (acc, curlist)) (0, []) hexes_gained)
@@ -232,17 +245,18 @@ let weight_loc settle num board res_owned inters=
 		| None ->
 	if (settle_one_away num inters) then 0 else 
 	let hexes_gained = adjacent_pieces num in
-	fst (List.fold_left (fun (acc, curlist) hex_gained ->
+	let (bnum, wnum, onum, gnum, lnum) = get_num_each_resource hexlist 
+in fst (List.fold_left (fun (acc, curlist) hex_gained ->
 		try (let (terrain,roll) = List.nth hexlist hex_gained in
 		let (acc', div_factor, res, import_factor) =
 		 let res_owned' = curlist@res_owned in
 		 match (resource_of_terrain terrain) with
 			| None -> (-1, 1, [], 0)
-			| Some Grain -> (50, 1 + (weight_num_owned (Grain, roll) res_owned'), [Grain, roll], 2)
-			| Some Lumber -> (70, 1 + (weight_num_owned (Lumber, roll) res_owned'), [Lumber, roll], 3)
-			| Some Brick -> (100, 1 + (weight_num_owned (Brick, roll) res_owned'), [Brick, roll], 3)
-			| Some Wool -> (50, 1 + (weight_num_owned (Wool, roll) res_owned'), [Wool, roll], 2)
-			| Some Ore -> (50, 1 + (weight_num_owned (Ore, roll) res_owned'), [Ore, roll], 1) in
+			| Some Grain -> ((gnum*17), 1 + (weight_num_owned (Grain, roll) res_owned'), [Grain, roll], 2)
+			| Some Lumber -> ((lnum*33), 1 + (weight_num_owned (Lumber, roll) res_owned'), [Lumber, roll], 3)
+			| Some Brick -> ((bnum*33), 1 + (weight_num_owned (Brick, roll) res_owned'), [Brick, roll], 3)
+			| Some Wool -> ((wnum*17), 1 + (weight_num_owned (Wool, roll) res_owned'), [Wool, roll], 2)
+			| Some Ore -> ((onum*12), 1 + (weight_num_owned (Ore, roll) res_owned'), [Ore, roll], 1) in
 		let acc' = acc' * (expected_of_36 roll import_factor) / div_factor in
 		(acc + acc', res@curlist)
 	) with _ -> (acc, curlist)) (0, []) hexes_gained)
@@ -796,16 +810,4 @@ let try_for_res (hexes, ports) (inters, rlist) robberloc needo color plist goal:
 
 	(* We have tried everything, just give up. *)
 	NoStrategy
-
-let get_num_each_resource hex_list = 
-	let resources = List.map (fun (t,r) -> resource_of_terrain t) hex_list
-in List.fold_left (fun (b,w,o,g,l) ele-> 
-	match ele with  
-		| Some Brick -> (b+1, w, o, g, l)
-		| Some Wool -> (b, w+1, o, g, l)
-		| Some Ore -> (b, w, o+1, g, l)
-		| Some Grain -> (b, w, o, g+1, l)
-		| Some Lumber -> (b, w, o, g, l+1)
-		| None -> (b, w, o, g, l)) (0,0,0,0,0) resources
-
 
