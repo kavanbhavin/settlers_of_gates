@@ -79,7 +79,7 @@ module Bot = functor (S : Soul) -> struct
       | DiscardRequest-> 
         
         DiscardMove (get_discard_res (get_res color plist) !res_needed)
-      | TradeRequest -> TradeResponse(false)
+      | TradeRequest -> TradeResponse(true)
       | ActionRequest -> 
 
         (if (!goal = NA && !need_card) then goal:=OCard);
