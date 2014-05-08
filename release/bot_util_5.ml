@@ -131,7 +131,7 @@ let close_to_win_vp = 7
 let any_player_close_to_winning plist structures = List.fold_left (fun acc (color, hand, trophy) -> 
 	if get_num_vp color plist structures >= close_to_win_vp then true else acc) false plist 
 
-let change_phase_ratio : float = 0.35
+let change_phase_ratio : float = 0.3
 
 let which_phase (inters, rlist) plist = if any_player_close_to_winning plist (inters, rlist)
 	then Late else if (ratio_of_settlements inters) > change_phase_ratio then Middle else Early
@@ -228,7 +228,7 @@ let weight_loc1 settle num board res_owned inters=
 			| Some Grain -> ((gnum*25), 1 + (weight_num_owned (Grain, roll) res_owned'), [Grain, roll], 3)
 			| Some Lumber -> ((lnum*12), 1 + (weight_num_owned (Lumber, roll) res_owned'), [Lumber, roll], 2)
 			| Some Brick -> ((bnum*13), 1 + (weight_num_owned (Brick, roll) res_owned'), [Brick, roll], 2)
-			| Some Wool -> ((wnum*17), 1 + (weight_num_owned (Wool, roll) res_owned'), [Wool, roll], 1)
+			| Some Wool -> ((wnum*7), 1 + (weight_num_owned (Wool, roll) res_owned'), [Wool, roll], 1)
 			| Some Ore -> ((onum*30), 1 + (weight_num_owned (Ore, roll) res_owned'), [Ore, roll], 3) in
 		let acc' = acc' * (expected_of_36 roll import_factor) / div_factor in
 		(acc + acc', res@curlist)
@@ -252,11 +252,11 @@ in fst (List.fold_left (fun (acc, curlist) hex_gained ->
 		 let res_owned' = curlist@res_owned in
 		 match (resource_of_terrain terrain) with
 			| None -> (-1, 1, [], 0)
-			| Some Grain -> ((gnum*17), 1 + (weight_num_owned (Grain, roll) res_owned'), [Grain, roll], 2)
-			| Some Lumber -> ((lnum*33), 1 + (weight_num_owned (Lumber, roll) res_owned'), [Lumber, roll], 3)
+			| Some Grain -> ((gnum*12), 1 + (weight_num_owned (Grain, roll) res_owned'), [Grain, roll], 2)
+			| Some Lumber -> ((lnum*17), 1 + (weight_num_owned (Lumber, roll) res_owned'), [Lumber, roll], 3)
 			| Some Brick -> ((bnum*33), 1 + (weight_num_owned (Brick, roll) res_owned'), [Brick, roll], 3)
-			| Some Wool -> ((wnum*17), 1 + (weight_num_owned (Wool, roll) res_owned'), [Wool, roll], 2)
-			| Some Ore -> ((onum*12), 1 + (weight_num_owned (Ore, roll) res_owned'), [Ore, roll], 1) in
+			| Some Wool -> ((wnum*12), 1 + (weight_num_owned (Wool, roll) res_owned'), [Wool, roll], 2)
+			| Some Ore -> ((onum*17), 1 + (weight_num_owned (Ore, roll) res_owned'), [Ore, roll], 1) in
 		let acc' = acc' * (expected_of_36 roll import_factor) / div_factor in
 		(acc + acc', res@curlist)
 	) with _ -> (acc, curlist)) (0, []) hexes_gained)

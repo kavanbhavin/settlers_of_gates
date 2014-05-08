@@ -7,74 +7,8 @@ type phase = Early | Middle | Late
   type objective = NA | OTown of int | OCity of int | OCard | ORoad of int * int
   type to_buy = RoadBuy | TownBuy | CityBuy | CardBuy
   type strategy = SPlayerTrade of int * cost * cost | SMaritimeTrade of resource * resource | SBuildCard | NoStrategy
-  	| SPlayYoP of resource * resource | SPlayMonopoly of resource | SPlayKnight of robbermove | SPlayRoadBuild of road * road option
+  	| SPlayYoP of resource * resource | SPlayMonopoly of resource | SPlayKnight of robbermove | SPlayRoadBuild of int * int
   	| SBuildRoad of road
-
-(*returns the number of points generating the a resource on the board*)  	
-let get_num_each_resource hex_list : cost = 
-	let resources = List.map (fun (t,r) -> resource_of_terrain t) hex_list
-in List.fold_left (fun (b,w,o,g,l) ele-> 
-	match ele with  
-		| Some Brick -> (b+1, w, o, g, l)
-		| Some Wool -> (b, w+1, o, g, l)
-		| Some Ore -> (b, w, o+1, g, l)
-		| Some Grain -> (b, w, o, g+1, l)
-		| Some Lumber -> (b, w, o, g, l+1)
-		| None -> (b, w, o, g, l)) (0,0,0,0,0) resources
-
-(* Returns "player col owns a road with one point
-    on point." *)
-let own_road_with_point point col roads : bool = 
-  List.fold_left (fun acc (r_c, (r_s, r_e)) -> 
-    acc || ((r_s = point || r_e = point) && r_c = col)) false roads
-
-   (* Helper function for longest road that filters first. *)
-  let longest_road' c roads inters = 
-    let roads = List.filter (fun (col, _) -> col = c) roads in
-    longest_road c roads inters
-
-  let road_exists (r1, r2) rlist : bool = 
-  	List.exists (fun (r1', r2') -> ((r1 = r1' && r2 = r2') || (r1 = r2' && r2 = r1'))) rlist
-  let real_road_exists (r1, r2) rlist : bool = 
-  	List.exists (fun (_, (r1', r2')) -> ((r1 = r1' && r2 = r2') || (r1 = r2' && r2 = r1'))) rlist
-
-(* Returns a list of all possible roads that color can build. *)
-let all_possible_roads ((inters, roads) : structures) color : (int * int) list = 
-	let settlesi = (List.mapi (fun i valu -> (valu, i)) inters) in
-	(* Get all roads possible on the map. *)
-	let all_roads = List.fold_left (fun acc (_, i) ->
-		let adj = adjacent_points i in
-		(List.fold_left (fun acc' b ->
-			if (real_road_exists (i, b) roads)  || (road_exists (i,b) acc') then acc'
-			else (i, b)::acc') acc adj)) [] settlesi in
-	(* Is a town either owned by us or empty? *)
-	let town_checks n = match ((List.nth inters n) : intersection) with
-		| None -> true
-		| Some (c, _) -> c = color in
-	(* Filter all possible roads to just the ones we can build. *)
-	let possible_roads = List.filter (fun (a, b) ->
-		(List.fold_left (fun acc (r_c, (r_s, r_e)) -> 
-    		acc || (((r_s = a) || (r_e = a)) && r_c = color && (town_checks a))) false roads  || 
-		List.fold_left (fun acc (r_c, (r_s, r_e)) -> 
-    		acc || (((r_s = b) || (r_e = b)) && r_c = color && (town_checks b))) false roads)) all_roads
-	in
-	possible_roads
-
-(* Return whether or not building a road would increase our longest road.
-	If so, Some of that road. Otherwise None. *)
-let extend_road color (inters, roads) : road option = 
-	let long_road = longest_road' color roads inters in 
-	let poss_roads = all_possible_roads (inters, roads) color in
-	let weighted_roads = List.map (fun l -> 
-		let new_roads = (color,l)::roads in 
-		let weight = (longest_road' color new_roads inters) - long_road in 
-		((color, l), weight)) poss_roads in 
-	let sorted_roads = List.sort (fun (_, a) (_, b) -> b - a) weighted_roads in
-	match sorted_roads with
-		| [] -> None
-		| (r, w)::_ -> if (w <= 0) then None else Some r
-
-	
 
 (* Returns a certain player from a player list.
 THIS FUNCTION FAILS IF THE PLAYER ISN'T IN THE LIST. *)
@@ -131,7 +65,7 @@ let close_to_win_vp = 7
 let any_player_close_to_winning plist structures = List.fold_left (fun acc (color, hand, trophy) -> 
 	if get_num_vp color plist structures >= close_to_win_vp then true else acc) false plist 
 
-let change_phase_ratio : float = 0.35
+let change_phase_ratio : float = 0.20
 
 let which_phase (inters, rlist) plist = if any_player_close_to_winning plist (inters, rlist)
 	then Late else if (ratio_of_settlements inters) > change_phase_ratio then Middle else Early
@@ -141,6 +75,7 @@ let is_robber_on_mine robber (inters : intersection list) own_color: bool =
 	match List.nth inters point with
 		| Some (color, _) -> color=own_color || acc
 		| None -> acc ) false corners
+let phase_is_not_early structures plist = (which_phase structures plist) != Early
 let phase_is_late structures plist = (which_phase structures plist) = Late 
 
 
@@ -216,20 +151,19 @@ let weight_loc1 settle num board res_owned inters=
 	match settle with
 		| Some _ -> 0
 		| None ->
-	if (settle_one_away num inters) then 0 else
-	let (bnum, wnum, onum, gnum, lnum) = get_num_each_resource hexlist in
+	if (settle_one_away num inters) then 0 else 
 	let hexes_gained = adjacent_pieces num in
 	fst (List.fold_left (fun (acc, curlist) hex_gained ->
 		try (let (terrain,roll) = List.nth hexlist hex_gained in
-	 let (acc', div_factor, res, import_factor) =
+		let (acc', div_factor, res, import_factor) =
 		 let res_owned' = curlist@res_owned in
 		 match (resource_of_terrain terrain) with
 			| None -> (-1, 1, [], 0)
-			| Some Grain -> ((gnum*25), 1 + (weight_num_owned (Grain, roll) res_owned'), [Grain, roll], 3)
-			| Some Lumber -> ((lnum*12), 1 + (weight_num_owned (Lumber, roll) res_owned'), [Lumber, roll], 2)
-			| Some Brick -> ((bnum*13), 1 + (weight_num_owned (Brick, roll) res_owned'), [Brick, roll], 2)
-			| Some Wool -> ((wnum*17), 1 + (weight_num_owned (Wool, roll) res_owned'), [Wool, roll], 1)
-			| Some Ore -> ((onum*30), 1 + (weight_num_owned (Ore, roll) res_owned'), [Ore, roll], 3) in
+			| Some Grain -> (100, 1 + (weight_num_owned (Grain, roll) res_owned'), [Grain, roll], 3)
+			| Some Lumber -> (50, 1 + (weight_num_owned (Lumber, roll) res_owned'), [Lumber, roll], 2)
+			| Some Brick -> (40, 1 + (weight_num_owned (Brick, roll) res_owned'), [Brick, roll], 2)
+			| Some Wool -> (30, 1 + (weight_num_owned (Wool, roll) res_owned'), [Wool, roll], 1)
+			| Some Ore -> (90, 1 + (weight_num_owned (Ore, roll) res_owned'), [Ore, roll], 3) in
 		let acc' = acc' * (expected_of_36 roll import_factor) / div_factor in
 		(acc + acc', res@curlist)
 	) with _ -> (acc, curlist)) (0, []) hexes_gained)
@@ -245,18 +179,17 @@ let weight_loc settle num board res_owned inters=
 		| None ->
 	if (settle_one_away num inters) then 0 else 
 	let hexes_gained = adjacent_pieces num in
-	let (bnum, wnum, onum, gnum, lnum) = get_num_each_resource hexlist 
-in fst (List.fold_left (fun (acc, curlist) hex_gained ->
+	fst (List.fold_left (fun (acc, curlist) hex_gained ->
 		try (let (terrain,roll) = List.nth hexlist hex_gained in
 		let (acc', div_factor, res, import_factor) =
 		 let res_owned' = curlist@res_owned in
 		 match (resource_of_terrain terrain) with
 			| None -> (-1, 1, [], 0)
-			| Some Grain -> ((gnum*17), 1 + (weight_num_owned (Grain, roll) res_owned'), [Grain, roll], 2)
-			| Some Lumber -> ((lnum*33), 1 + (weight_num_owned (Lumber, roll) res_owned'), [Lumber, roll], 3)
-			| Some Brick -> ((bnum*33), 1 + (weight_num_owned (Brick, roll) res_owned'), [Brick, roll], 3)
-			| Some Wool -> ((wnum*17), 1 + (weight_num_owned (Wool, roll) res_owned'), [Wool, roll], 2)
-			| Some Ore -> ((onum*12), 1 + (weight_num_owned (Ore, roll) res_owned'), [Ore, roll], 1) in
+			| Some Grain -> (30, 1 + (weight_num_owned (Grain, roll) res_owned'), [Grain, roll], 2)
+			| Some Lumber -> (70, 1 + (weight_num_owned (Lumber, roll) res_owned'), [Lumber, roll], 3)
+			| Some Brick -> (100, 1 + (weight_num_owned (Brick, roll) res_owned'), [Brick, roll], 3)
+			| Some Wool -> (30, 1 + (weight_num_owned (Wool, roll) res_owned'), [Wool, roll], 2)
+			| Some Ore -> (10, 1 + (weight_num_owned (Ore, roll) res_owned'), [Ore, roll], 1) in
 		let acc' = acc' * (expected_of_36 roll import_factor) / div_factor in
 		(acc + acc', res@curlist)
 	) with _ -> (acc, curlist)) (0, []) hexes_gained)
@@ -284,6 +217,22 @@ let sort_locs inters board res_tiles plist =
       (inter, n, (weight_loc1 inter n board res_tiles inters))) inters in
     List.sort (fun (_, _, w1) (_,_, w2) -> w2 - w1) weighted_inters
 
+let sort_locs_roads inters board res_tiles plist rlist own_color= 
+	let road_weights : float list = best_points_weighted inters rlist own_color
+	in 
+	let (_, structures, _ , _ ,_ ) = board in 
+	match which_phase structures plist with 
+	| Early -> 	let regular_weights = List.mapi (fun n inter ->
+      (inter, n, (weight_loc inter n board res_tiles inters))) inters in
+let weighted_inters = List.map2 (fun (a,b, regw) roadw -> (a,b, (float_of_int regw) /. roadw)) 
+regular_weights road_weights
+	in 
+    List.sort (fun (_, _, w1) (_,_, w2) -> if w2 > w1 then 1 else if w2 = w1 then 0 else (-1)) weighted_inters
+    | _ -> 	let regular_weights = List.mapi (fun n inter ->
+      (inter, n, (weight_loc1 inter n board res_tiles inters))) inters in
+    let weighted_inters = List.map2 (fun (a,b, regw) roadw -> (a,b, (float_of_int regw) /. roadw)) regular_weights road_weights
+	in List.sort (fun (_, _, w1) (_,_, w2) -> if w2 > w1 then 1 else if w2 = w1 then 0 else (-1)) weighted_inters
+
 (* STUFF COPIED FROM IS_VALID *)
 
 (* If p1 and p2 are adjacent. *)
@@ -300,6 +249,12 @@ let empty_road (p1, p2) roads : bool =
   if (not (valid_pair (p1, p2))) then false else
   not (List.exists (fun (_, line) ->
     (line = (p1, p2) || line = (p2, p1))) roads)
+
+(* Returns "player col owns a road with one point
+    on point." *)
+let own_road_with_point point col roads : bool = 
+  List.fold_left (fun acc (r_c, (r_s, r_e)) -> 
+    acc || ((r_s = point || r_e = point) && r_c = col)) false roads
 
 (* PRECONDITION: p1 is a valid indices. *)
 let empty_settlement p1 intersections : bool =
@@ -461,7 +416,7 @@ let get_init_road ((inters, roads) : structures) res_tiles board color loc plist
  	 | OCard -> cCOST_CARD
  	 | ORoad _ -> cCOST_ROAD
 
- let color_has_resource color plist = 
+let color_has_resource color plist = 
 	List.fold_left (fun acc (color', (inventory, cards), trophies) -> 
 	if color'=color then (sum_cost inventory) > 0 || acc 
 	else acc) false plist
@@ -591,7 +546,7 @@ let get_best_mono_resource col plist =
 Should we try to build it right away, or should we build a road 
 to a better location first? Should we initiate a trade? ... *)
 let town_move ((inters, roads) : structures) res_tiles board (b,w,o,g,l) color plist : objective = 
-	let weighted_locs = sort_locs inters board res_tiles plist in
+	let weighted_locs = sort_locs_roads inters board res_tiles plist roads color in
 	let nearby_options = get_near_empty (inters, roads) color true in
 	let nearby_options = if (List.length nearby_options) = 0 then 
 		get_near_empty (inters, roads) color false else nearby_options in
@@ -645,86 +600,6 @@ let calc_best_ratio (ports : port list) inters col : ratio =
 		ratio else best_ratio
 	) cMARITIME_DEFAULT_RATIO ports
 
-let get_num_vp_cards col plist = 
-    let (col, (inv, cards), trophs) = get_player col plist in
-    let hand = match cards with
-     | Hidden _ -> failwith "Get Num VP Cards: Cards Hidden!"
-     | Reveal ls -> ls in
-    List.fold_left (fun acc v ->  if (v = Knight) then acc+1
-      else acc) 0 hand
-
-  let get_num_trophy_points col plist = 
-    let (_, _, (_, longroad, largearmy)) = get_player col plist in
-    let count = 0 in 
-    let count = if (longroad) then count + cVP_LONGEST_ROAD else count in
-    let count = if (largearmy) then count + cVP_LARGEST_ARMY else count in
-    count
-
-  (* Gets a player's number of victory points. *)
-  let get_num_vp col plist (inters, roads) : int = 
-    let town_points = cVP_TOWN * (get_num_settles col inters Town) in
-    let city_points = cVP_CITY * (get_num_settles col inters City) in
-    let card_points = cVP_CARD * (get_num_vp_cards col plist) in
-    let troph_points = get_num_trophy_points col plist in
-    town_points + city_points + card_points + troph_points
-
-let have_longest_road plist (inters, roads) color = 
-	let proads = List.map (fun (pcol, phand, ptroph) -> 
-		let numroads = longest_road' pcol roads inters in
-		((pcol, phand, ptroph), numroads)) plist in 
-	let winner = List.fold_left (fun acc ((pcol, _, _), numroads) ->
-		match acc with
-			| None -> if (numroads >= cMIN_LONGEST_ROAD) then
-				Some (pcol, numroads) else None
-			| Some (pcolold, numroadsold) ->
-				if (numroads > numroadsold) then
-				Some (pcol, numroads) else Some (pcolold, numroadsold)) None proads in
-	match winner with
-		| None -> false 
-		| Some (col, _) -> col = color
-
-let have_largest_army plist (inters, roads) color = 
-	let winner = List.fold_left (fun acc (pcol, _, (knights, _, _)) ->
-		match acc with
-			| None -> if (knights >= cMIN_LARGEST_ARMY) then
-				Some (pcol, knights) else None
-			| Some (pcolold, sizearmyold) ->
-				if (knights > sizearmyold) then
-				Some (pcol, knights) else Some (pcolold, sizearmyold)) None plist in
-	match winner with
-		| None -> false 
-		| Some (col, _) -> col = color
-
-
-let delta_longest_road plist (inters, roads) color = 
-	let my_road_length = longest_road' color roads inters in 
-	let proads = List.map (fun (pcol, phand, ptroph) -> 
-		let numroads = longest_road' pcol roads inters in
-		((pcol, phand, ptroph), numroads)) plist in 
-	let winner = List.fold_left (fun acc ((pcol, _, _), numroads) ->
-		match acc with
-			| None -> if (numroads >= cMIN_LONGEST_ROAD) then
-				Some (pcol, numroads) else None
-			| Some (pcolold, numroadsold) ->
-				if (numroads > numroadsold) then
-				Some (pcol, numroads) else Some (pcolold, numroadsold)) None proads in
-	match winner with
-		| None -> cMIN_LONGEST_ROAD-my_road_length 
-		| Some (_, l) -> l - my_road_length
-
-let delta_largest_army plist (inters, roads) color = 
-	let (_, _, (my_knights, _, _)) = get_player color plist in
-	let winner = List.fold_left (fun acc (pcol, _, (knights, _, _)) ->
-		match acc with
-			| None -> if (knights >= cMIN_LARGEST_ARMY) then
-				Some (pcol, knights) else None
-			| Some (pcolold, sizearmyold) ->
-				if (knights > sizearmyold) then
-				Some (pcol, knights) else Some (pcolold, sizearmyold)) None plist in
-	match winner with
-		| None -> cMIN_LARGEST_ARMY - my_knights 
-		| Some (_, num) -> num-my_knights
-
 (* Given the resources we have and those we need,
 	try to get some of the ones we need by whatever means
 	are available (sea trade, player trade, playing cards ,etc) *)
@@ -741,25 +616,15 @@ let try_for_res (hexes, ports) (inters, rlist) robberloc needo color plist goal:
 
 	(* If we have some cards, see if they would be useful. *)
 	let rb_strat = if (List.mem RoadBuilding cards) then
-	let num_roads = get_num_roads color rlist 
-	in 
-		if (needo=cCOST_ROAD) && num_roads < cMAX_ROADS_PER_PLAYER 
-		then	if num_roads = (cMAX_ROADS_PER_PLAYER - 1)
-				then match goal with 
-						| ORoad (p1,p2) -> if (valid_pair (p1, p2)) then SPlayRoadBuild ((color, (p1,p2)), None) else failwith "invalid pair in first oroad"
-						| _ -> SPlayRoadBuild ((best_road inters rlist color), None) 
-				else match goal with
-						| ORoad (p1, p2) -> if (valid_pair (p1, p2)) then SPlayRoadBuild ((color, (p1, p2)), Some (best_road inters ((color, (p1,p2))::rlist) color)) 
-					else failwith "invalid pair in second oroad"
-						| _ -> NoStrategy (* should never happen! *)
-		else if num_roads < cMAX_ROADS_PER_PLAYER
-			then 	if num_roads = (cMAX_ROADS_PER_PLAYER - 1)
-					then SPlayRoadBuild ((best_road inters rlist color), None) 
-					else let first_road = best_road inters rlist color 
-					in SPlayRoadBuild (first_road, Some (best_road inters (first_road::rlist) color)) 
-			else NoStrategy 
-		else NoStrategy
-	in
+		let num_towns = get_num_settles color inters Town in
+		let num_cities = get_num_settles color inters City in
+		if (needo=cCOST_ROAD) then match goal with
+			| ORoad (p1, p2) -> SPlayRoadBuild (p1, p2)
+			| _ -> NoStrategy (* should never happen! *)
+		else if (num_towns >= cMAX_TOWNS_PER_PLAYER && num_cities >= cMAX_CITIES_PER_PLAYER
+			&& (get_num_roads color rlist) <= cMAX_ROADS_PER_PLAYER) then 
+		(* insert logic for building road after main construction phase here *) NoStrategy
+	else NoStrategy else NoStrategy in
 	match rb_strat with
 		| SPlayRoadBuild (p1, p2) -> SPlayRoadBuild (p1, p2)
 		| _ ->
@@ -783,15 +648,8 @@ let try_for_res (hexes, ports) (inters, rlist) robberloc needo color plist goal:
 	if enough_res have cCOST_CARD then
 		SBuildCard else
 
-	(* let potent_road = ref (color, (0, 0)) in
-
-	let () = potent_road:= (if enough_res have cCOST_ROAD && get_num_roads color rlist < cMAX_ROADS_PER_PLAYER &&
-		 get_num_vp color plist (inters, rlist) >= cWIN_CONDITION then match (extend_road color (inters, rlist)) with
-			| None -> (color, (0, 0))
-			| Some r -> r else (color, (0, 0))) in
-
-	if (!potent_road <> (color, (0, 0))) then
-		SBuildRoad (!potent_road) else *)
+	(* if enough_res have cCOST_ROAD && get_num_roads color rlist < cMAX_ROADS_PER_PLAYER then
+		SBuildRoad (best_road inters rlist color) else *)
 
 	(* Check for usefulness of maritime trade. *)
 	let ratio = calc_best_ratio ports inters color in
@@ -810,4 +668,3 @@ let try_for_res (hexes, ports) (inters, rlist) robberloc needo color plist goal:
 
 	(* We have tried everything, just give up. *)
 	NoStrategy
-
