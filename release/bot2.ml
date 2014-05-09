@@ -33,11 +33,9 @@ module Bot = functor (S : Soul) -> struct
       | (_, h, score)::t -> match get_valid_road h (inters, roads) color with
         | None -> pick_move t
         | Some _ ->
-          let () = print_endline ("score: "^(string_of_int score)^" at: "^(string_of_int h)) in
           (add_res h res_tiles board); 
             get_init_road (inters, roads) !res_tiles board color h in
     let (p1, p2) = pick_move weighted_inters in
-    let () = print_endline ("line: "^(string_of_int p1)^" to "^(string_of_int p2)) in
     (p1, p2)
 
    (* We have yet to build the maximum number of towns.
@@ -68,11 +66,9 @@ module Bot = functor (S : Soul) -> struct
     let (hexes, ports) = map in 
     match request with
       | InitialRequest -> InitialMove (choose_init_move structs board color) 
-      | RobberRequest -> let (temp, _) = (get_robber_move hexes inters color robber plist !res_needed) in 
-          let () = print_endline ("robbing to: "^(string_of_int temp)) in
+      | RobberRequest -> let (temp, _) = (get_robber_move hexes inters color robber plist !res_needed) in
           RobberMove(get_robber_move hexes inters color robber plist !res_needed)
       | DiscardRequest-> let (b,w,o,g,l) = (get_discard_res (get_res color plist) !res_needed) in
-        let () = print_endline ((string_of_int b)^(string_of_int w)^(string_of_int o)^(string_of_int g)^(string_of_int l)) in
         DiscardMove (get_discard_res (get_res color plist) !res_needed)
       | TradeRequest -> TradeResponse(false)
       | ActionRequest -> 

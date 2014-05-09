@@ -108,7 +108,7 @@ in List.filter (fun (i, _) ->
       			| None -> failwith "no towns?!"
       		else match pick_random (can_build_town_specific structures c plist) with 
       		| Some ((index, _)) -> Action (BuyBuild (BuildTown (index)))
-      		| None -> (Printf.printf "not enough for town or city" ); 
+      		| None ->
       		if have_enough_resources_card my_inventory
       		then Action (BuyBuild (BuildCard)) 
       	else let my_cards = 
