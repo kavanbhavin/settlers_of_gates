@@ -24,7 +24,7 @@ let build_road (inters, rlist) line color plist : structures * (player list) =
     ((inters, rlist), plist)
   else 
   	let structs' = (inters, ((color, line)::rlist)) in
-  	let plist' = update_longest_road plist structs' in
+  	let (plist' : player list) = update_longest_road plist structs' color in
   	(structs', plist')
 
  (* Checks if we can build a road (enough resources and its free / in range. *)

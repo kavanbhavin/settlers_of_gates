@@ -40,7 +40,7 @@ let play_knight plist color turn rob_move robber structs=
 	match (get_card plist color Knight) with
 		| None -> None
 		| Some plist' -> 
-			let plist' = update_largest_army plist' structs in
+			let plist' = update_largest_army plist' structs color in
 			let turn' =  play_card turn in
 			let res = do_robber_move color rob_move structs robber plist' in
 			match res with

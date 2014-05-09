@@ -32,7 +32,7 @@ let min_valid_init (map, structs, deck, discard, robber) color plist=
          let new_inters = List.mapi (fun i' v -> 
            if (i = i') then new_town else v) inters in
          let new_roads = road::roads in 
-         let plist' = update_longest_road plist (new_inters, new_roads) in
+         let plist' = update_longest_road plist (new_inters, new_roads) color in
          (new_inters, new_roads), snd road, plist'
        | None -> failwith "Min_valid_init_move: Move gone!"
 

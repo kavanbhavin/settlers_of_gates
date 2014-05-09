@@ -489,11 +489,11 @@ in fst (List.fold_left (fun (acc, curlist) hex_gained ->
      let res_owned' = curlist@res_owned in
      match (resource_of_terrain terrain) with
       | None -> (-1, 1, [], 0)
-      | Some Grain -> ((17/gnum), 1 + (weight_num_owned (Grain, roll) res_owned'), [Grain, roll], 2)
-      | Some Lumber -> ((33/lnum), 1 + (weight_num_owned (Lumber, roll) res_owned'), [Lumber, roll], 3)
-      | Some Brick -> ((33/bnum), 1 + (weight_num_owned (Brick, roll) res_owned'), [Brick, roll], 3)
-      | Some Wool -> ((17/wnum), 1 + (weight_num_owned (Wool, roll) res_owned'), [Wool, roll], 2)
-      | Some Ore -> ((12/onum), 1 + (weight_num_owned (Ore, roll) res_owned'), [Ore, roll], 1) in
+      | Some Grain -> ((50/gnum), 1 + (weight_num_owned (Grain, roll) res_owned'), [Grain, roll], 2)
+      | Some Lumber -> ((70/lnum), 1 + (weight_num_owned (Lumber, roll) res_owned'), [Lumber, roll], 3)
+      | Some Brick -> ((100/bnum), 1 + (weight_num_owned (Brick, roll) res_owned'), [Brick, roll], 3)
+      | Some Wool -> ((50/wnum), 1 + (weight_num_owned (Wool, roll) res_owned'), [Wool, roll], 2)
+      | Some Ore -> ((50/onum), 1 + (weight_num_owned (Ore, roll) res_owned'), [Ore, roll], 1) in
     let acc' = acc' * (expected_of_36 roll import_factor) / div_factor in
     (acc + acc', res@curlist)
   ) with _ -> (acc, curlist)) (0, []) hexes_gained)
@@ -993,6 +993,7 @@ let suggest_trade need plist trades_made_o our_color (inters, roads): trade opti
   let our_res = get_res our_color plist in 
   let res_to_go = subtract_res need our_res in
   let res_to_go = normalize res_to_go in 
+  let plist = randomize plist in
   let (num_gained, trad) = List.fold_left (fun (num_best, tr) (col, _, _) ->
     let default = (num_best, tr) in 
     if (col = our_color) then default else
@@ -1120,7 +1121,7 @@ let try_for_res (hexes, ports) (inters, rlist) robberloc needo color plist goal 
       else NoStrategy in 
     match trade_strat with
       | SOfferTrade tr -> SOfferTrade tr
-      | _ ->
+      | _ -> 
 
   (* Check for usefulness of maritime trade. *)
   let ratio = calc_best_ratio ports inters color in
