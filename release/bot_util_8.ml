@@ -1,14 +1,244 @@
-open Util
-open Definition
 open Constant
-open Best_road
+open Definition
+open Util
+
+type own_point = CanBuild of int * int | DistanceToNearest of (int * int * int) 
+
+(*first two ints represent road in both cases*)
+type own_road = RoadCanBuild of (int * int * int) | RoadDistanceToNearest of (int * int * int * int)
+
+let board_points : int list= let rec helper n acc = 
+	if n = (-1)
+	then acc 
+	else helper (n-1) (n::acc) 
+in helper (cNUM_POINTS-1) [] 
+
+let rec remove_duplicates ls = 
+	let ls' = List.sort compare ls
+in match ls' with 
+	| a::b::tl -> if a = b then (remove_duplicates (a::tl)) else a::(remove_duplicates (b::tl))
+	| _ -> ls'
+
+(* uses an array, that is indexed by points, to compute road distance between two points. 
+The array is set to true for every point that has been seen already. *)
+let distance_between_points_array p1 p2 = 
+	let distance = (let rec helper p acc distance = 
+		if acc.(p) = true then distance
+	else let lop = ref [] in 
+	for i=0 to ((Array.length acc)-1) do 
+	if acc.(i) = true 
+	then lop := (adjacent_points i) @ !lop
+else ()
+done; (List.iter (fun element -> acc.(element) <- true) !lop); 
+helper p acc (distance+1)
+in let init_array = Array.make cNUM_POINTS false in (init_array.(p2) <- true); 
+helper p1 init_array 0  ) in if distance < cNUM_POINTS then distance else failwith "bogus distance"
+
+
+(* extremely slow (but functional) implementation of distance between points function *)
+let distance_between_points p1 p2 =
+	try (let rec helper p lop distance = 
+		if List.mem p lop 
+		then distance
+		else helper p (remove_duplicates (List.flatten (List.map adjacent_points lop))) (distance+1)
+	in helper p1 [p2] 1) with _ -> failwith "failure in distance in list points"
+
+
+let memoized_distance = 
+	let h = Hashtbl.create cNUM_POINTS 
+in fun (p1, p2) -> 	let smaller = min p1 p2 
+in let bigger = max p1 p2 in
+		if Hashtbl.mem h (smaller, bigger)
+		then Hashtbl.find h (smaller, bigger)
+	else let distance = distance_between_points_array smaller bigger
+in (Hashtbl.add h (smaller, bigger) distance); distance
+
+
+(* Returns true if there exists a settlement
+    < 2 road lengths away from point. *)
+  let settle_one_away point inters: bool = 
+    try (let neighbors = adjacent_points point in
+    List.fold_left (fun acc v ->
+      acc || (match (List.nth inters v) with
+        | None -> false
+        | Some _ -> true)) false neighbors) with _ -> failwith "failure in settle_one_away"
+
+let should_build_road (point : point) (inters : intersection list) : bool = let point_is_empty = match (List.nth inters point) with 
+				| None -> true 
+				| _ -> false 
+			in point_is_empty && (not(settle_one_away point inters))
+
+let convert_to_our_type (inters :intersection list) : own_point list= 
+	List.map (fun (i : int)-> 
+		if (should_build_road i inters) 
+		then CanBuild (i, 0) 
+	else DistanceToNearest (i,0,0)) board_points
+
+let only_free_and_buildable_points inters : own_point list = 
+	List.filter (fun a -> 
+	match a with 
+	| CanBuild (i, _) -> 
+		begin match List.nth inters i with 
+				| None -> true
+				| _ -> false
+			end
+	| _ -> false ) (convert_to_our_type inters)
+
+let fill_in_distances inters : own_point list = 
+	let ofbp = only_free_and_buildable_points inters in 
+	List.rev (List.fold_left (fun (acc : own_point list) (ele : own_point) -> 
+	match ele with 
+	| DistanceToNearest (i, _, _) -> let distances : int list = 
+			List.map (fun a -> 
+				begin match a with 
+					| CanBuild (b, _) -> (memoized_distance (b, i)) 
+					| _ -> failwith "not can build in free and buildable?"
+				end
+	) ofbp
+		in let (min_distance, second_min_distance) : int * int = (List.fold_left (fun (min1, min2) element -> 
+			if element < min1 
+			then (element, min1)
+			else if element < min2
+			then (min1, min2)
+else (min1, min2)) (cNUM_POINTS, cNUM_POINTS) distances)
+in ((DistanceToNearest (i, min_distance, second_min_distance))::acc)
+	| CanBuild (i, _) ->let distances = 
+		List.map (fun a -> 
+			begin match a with 
+				| CanBuild (b, _) -> (memoized_distance (b, i))
+				| _ -> failwith "not can build in free and buildable?"
+			end 
+	) ofbp
+	in let min_distance = (List.fold_left (fun min element -> 
+		if element < min 
+		then element
+		else min)) (cNUM_POINTS) distances 
+	in ((CanBuild (i, min_distance))::acc)) [] (convert_to_our_type inters))
+
+let sorted_distances inters= let fid = fill_in_distances inters 
+in let check_order = let bools = List.mapi (fun i a -> match a with 
+					| CanBuild (j, _) 
+					| DistanceToNearest (j, _, _) -> i=j ) fid
+in List.fold_left (fun acc ele -> acc && ele) true bools in if check_order then ((*Printf.printf "order was correct"; *) fid) 
+else failwith "incorrect order" (*((Printf.printf "order was incorrect"); List.sort (fun a b -> 
+	begin match (a,b) with 
+		| (CanBuild i, CanBuild j) 
+		| (CanBuild i, DistanceToNearest (j, _, _ )) 
+		| ((DistanceToNearest (i, _, _), CanBuild j))
+		| ((DistanceToNearest (i, _, _), DistanceToNearest(j, _, _))) -> compare i j
+	end ) fid)
+*)
+
+(*Given a point, returns the list of possible roads in own type.*)
+let best_road_from_point inters rlist p : own_road list =  
+	try (let already_built_roads_from_point = List.fold_left (fun acc (_, (p1,p2)) ->
+	 if p1=p then p2::acc else if p2=p then p1::acc else acc) [] rlist 
+in let s = (sorted_distances inters) 
+in let our_type = List.map (fun a -> List.nth s a) (adjacent_points p) 
+in let our_type_with_built_roads_removed = List.filter (fun a -> match a with 
+			| CanBuild (i, _) 
+			| DistanceToNearest (i, _ , _ ) -> not(List.mem i already_built_roads_from_point)) our_type
+	in List.map (fun a -> match a with 
+		| CanBuild (i, j) -> RoadCanBuild (p,i, j)
+		| DistanceToNearest (i,j,k) -> RoadDistanceToNearest (p,i,j,k) ) our_type_with_built_roads_removed)
+with _ -> (Printf.printf "invalid point %d" p); failwith "asf"
+	(*let asd = List.fold_left (fun (acc : own_point) (ele : own_point) -> 
+	match (acc, ele) with 
+		| (CanBuild (i,j), CanBuild (k,l)) -> if j <l then acc else ele  
+		| (CanBuild (i,j), DistanceToNearest (k, l, m )) -> if j < (l+m) then acc else ele 
+		| ((DistanceToNearest (k, l, m), CanBuild (i,j))) -> if j < (l+m) then acc else ele 
+		| ((DistanceToNearest (_, d1, d2), DistanceToNearest(_, d3, d4))) -> 
+		if ((1.5 *. (float_of_int d1)) +. (float_of_int d2)) <= ((1.5 *. (float_of_int d3)) +. (float_of_int d4)) then acc else ele) 
+	(DistanceToNearest (1, cNUM_POINTS, cNUM_POINTS)) our_type_with_built_roads_removed
+in match asd with 
+| CanBuild (i, _) -> i 
+| DistanceToNearest (j, _, _) -> j*)
+let road_exists (r1, r2) rlist : bool = 
+  	List.exists (fun (r1', r2') -> ((r1 = r1' && r2 = r2') || (r1 = r2' && r2 = r1'))) rlist
+  let real_road_exists (r1, r2) rlist : bool = 
+  	List.exists (fun (_, (r1', r2')) -> ((r1 = r1' && r2 = r2') || (r1 = r2' && r2 = r1'))) rlist
+(* Returns a list of all possible roads that color can build. *)
+let all_possible_roads ((inters, roads) : structures) color : (int * int) list = 
+	let settlesi = (List.mapi (fun i valu -> (valu, i)) inters) in
+	(* Get all roads possible on the map. *)
+	let all_roads = List.fold_left (fun acc (_, i) ->
+		let adj = adjacent_points i in
+		(List.fold_left (fun acc' b ->
+			if (real_road_exists (i, b) roads)  || (road_exists (i,b) acc') then acc'
+			else (i, b)::acc') acc adj)) [] settlesi in
+	(* Is a town either owned by us or empty? *)
+	let town_checks n = match ((List.nth inters n) : intersection) with
+		| None -> true
+		| Some (c, _) -> c = color in
+	(* Filter all possible roads to just the ones we can build. *)
+	let possible_roads = List.filter (fun (a, b) ->
+		(List.fold_left (fun acc (r_c, (r_s, r_e)) -> 
+    		acc || (((r_s = a) || (r_e = a)) && r_c = color && (town_checks a))) false roads  || 
+		List.fold_left (fun acc (r_c, (r_s, r_e)) -> 
+    		acc || (((r_s = b) || (r_e = b)) && r_c = color && (town_checks b))) false roads)) all_roads
+	in
+	possible_roads
+
+let remove_other_roads (possible_roads : own_road list) (rlist: road list) own_color inters = 
+	let all_roads = all_possible_roads (inters, rlist) own_color
+in  List.filter (fun a -> 
+	match a with 
+		| RoadCanBuild (p1, p2, _) 
+		| RoadDistanceToNearest (p1, p2, _, _) -> (List.mem (p1,p2) all_roads || List.mem (p2,p1) all_roads) ) possible_roads
+(* simply returns the best road using this density based strategy*)
+let best_road inters rlist own_color : road= 
+	let my_roads = List.filter (fun (color, line) -> color = own_color) rlist
+	in let points_to_build_from = remove_duplicates (List.fold_left (fun acc (color, (p1,p2)) -> 
+	p1::p2::acc) [] my_roads)
+	in let possible_roads = remove_other_roads (List.flatten (List.map (best_road_from_point inters rlist) points_to_build_from)) rlist own_color inters
+	in let asd = List.fold_left (fun (best_road : own_road) (ele : own_road) -> 
+	match (best_road, ele) with 
+		| (RoadCanBuild (_,_,j), RoadCanBuild (_,_,l)) -> if j <l then best_road else ele  
+		| (RoadCanBuild (_,_,j), RoadDistanceToNearest (_, _, l, m) ) -> if j < (l+m) then best_road else ele 
+		| ((RoadDistanceToNearest (_, _, l, m), RoadCanBuild (_, _, j))) -> if j < (l+m) then best_road else ele 
+		| ((RoadDistanceToNearest (_, _, d1, d2), RoadDistanceToNearest(_, _, d3, d4))) -> 
+		if ((1.5 *. (float_of_int d1)) +. (float_of_int d2)) <= ((1.5 *. (float_of_int d3)) +. (float_of_int d4)) then best_road else ele) 
+	(RoadDistanceToNearest ((-100), 1, cNUM_POINTS, cNUM_POINTS)) possible_roads
+in match asd with 
+	| RoadCanBuild (p1, p2, _) -> (own_color, (p1, p2))
+	| RoadDistanceToNearest ((-100), 1, _, _) -> begin match all_possible_roads (inters, rlist) own_color with 
+														| hd::tl -> (Printf.printf "road was possible but best_road didn't find it"); (own_color, hd)
+														| [] -> (Printf.printf "no roads left"); (own_color, (1,1))
+													end 
+	| RoadDistanceToNearest (p1, p2, _, _) -> (own_color, (p1, p2)) 
+
+(* settlement, settlement location, weight sorted so first one is the best *)
+
+(* returns the best points on the board according to this density based strategy *)
+
+let best_points_sorted inters rlist own_color : point list = let entire_map = sorted_distances inters 
+	in let entire_map_sorted = List.sort (fun a b-> 
+	match (a,b) with 
+		| (CanBuild (i,j), CanBuild (k,l)) -> if j  = l then  0 else if j<l then (-1) else 1 
+		| (CanBuild (i,j), DistanceToNearest (k, l, m )) -> if j = (l+m) then 0 else if j < (l+m) then (-1) else 1
+		| ((DistanceToNearest (k, l, m), CanBuild (i,j))) -> if j = (l+m) then 0 else if j < (l+m) then (-1) else 1
+		| ((DistanceToNearest (_, d1, d2), DistanceToNearest(_, d3, d4))) -> 
+		if ((1.5 *. (float_of_int d1)) +. (float_of_int d2)) <= ((1.5 *. (float_of_int d3)) +. (float_of_int d4)) then (-1) else 1) entire_map
+in List.map (fun a -> 
+	match a with 
+	| CanBuild (i,_) 
+	| DistanceToNearest (i, _ , _ )-> i) entire_map_sorted
+
+(*returns weights based on density in a list indexed by points *)
+let best_points_weighted inters rlist own_color : float list = let entire_map = sorted_distances inters 
+	in List.map (fun a -> 
+	match a with 
+		| CanBuild (i,j) -> (float_of_int j)
+		| DistanceToNearest (k, d1, d2) -> (1.5 *. (float_of_int d1)) +. (float_of_int d2)) entire_map
+
+(*from bot_util*)
 
 type phase = Early | Middle | Late 
   type objective = NA | OTown of int | OCity of int | OCard | ORoad of int * int
   type to_buy = RoadBuy | TownBuy | CityBuy | CardBuy
   type strategy = SPlayerTrade of int * cost * cost | SMaritimeTrade of resource * resource | SBuildCard | NoStrategy
   	| SPlayYoP of resource * resource | SPlayMonopoly of resource | SPlayKnight of robbermove | SPlayRoadBuild of road * road option
-  	| SBuildRoad of road
+  	| SBuildRoad of road | SOfferTrade of trade
 
 (*returns the number of points generating the a resource on the board*)  	
 let get_num_each_resource hex_list : cost = 
@@ -725,10 +955,92 @@ let delta_largest_army plist (inters, roads) color =
 		| None -> cMIN_LARGEST_ARMY - my_knights 
 		| Some (_, num) -> num-my_knights
 
+let get_trade_info turn = 
+	match turn.pendingtrade with
+		| None -> ((0,0,0,0,0), (0,0,0,0,0), Blue) (* should never happen *)
+		| Some (_, get, lose) -> (get, lose, turn.active)
+
+(* Similar logic to discard, but we are trying to find resources to offer in a trade,
+	so the num_to_discard is more of a soft guideline rather than a hard minimum. *)
+let get_res_to_offer curr goal num_to_discard = 
+ 	let leftovers = subtract_res curr goal in 
+ 	let leftovers = normalize leftovers in
+ 	let rec choose_from_leftovers ls largest_el num_removed =
+ 		let num_removed = ref num_removed in  
+ 		let ls' = List.map (fun x -> if (x = largest_el && !num_removed < num_to_discard)
+ 			then let () = (num_removed:= (!num_removed + 1)) in x-1 else x) ls in
+ 		if (!num_removed < num_to_discard && largest_el <> 0) then choose_from_leftovers ls' (largest_el - 1) !num_removed
+		else list_to_cost ls' in 
+	let sorted_list = List.sort (fun a b -> b - a) (cost_to_list leftovers) in match sorted_list with
+		| h::_ -> let new_hand = choose_from_leftovers (cost_to_list leftovers) h 0 in 
+			subtract_res leftovers new_hand
+		| [] -> (0, 0, 0, 0, 0) (* Should never happen. *)
+
+(* Try to come up with a trade that might be helpful. 
+	Do not try with anyone who is beating us (as visible). Try trading at 2x ratio.
+	Find a player who has the most resources we need, and try bargaining for them with 
+	resources we don't need. *)
+let suggest_trade need plist trades_made_o our_color (inters, roads): trade option = 
+	let trades_made = !trades_made_o in 
+	let our_vp = get_num_vp our_color plist (inters, roads) in 
+	let our_res = get_res our_color plist in 
+	let res_to_go = subtract_res need our_res in
+	let res_to_go = normalize res_to_go in 
+	let (num_gained, trad) = List.fold_left (fun (num_best, tr) (col, _, _) ->
+		let default = (num_best, tr) in 
+		if (col = our_color) then default else
+		let their_vp = get_num_vp col plist (inters, roads) in 
+		if (their_vp > our_vp) then default else
+		let their_res = get_res col plist in 
+		let ours_with_all_theirs = add_res_vals our_res their_res in 
+		let would_be_res_to_go = subtract_res need ours_with_all_theirs in 
+		let would_be_res_to_go = normalize would_be_res_to_go in 
+		let res_needed_gained = normalize (subtract_res res_to_go would_be_res_to_go) in 
+		let res_gained = sum_cost res_needed_gained in 
+		if (List.mem col trades_made) then default else
+		if (res_gained <= num_best) then default else
+		let num_to_offer_ideal = res_gained * 2 in
+		let offer = get_res_to_offer our_res need num_to_offer_ideal in 
+		(res_gained, Some (col, offer, res_needed_gained))
+	) (0, None) plist in
+	match trad with
+		| None -> None
+		| Some (col, give, get) ->
+			(trades_made_o:=(col::trades_made)); Some (col, give, get)
+
+
+(* Should we accept or deny a trade request? Procedure: If the person asking for the trade is behind us by 
+	at least 2 victory points, is only asking for stuff we don't need right now, and is willing to give us 
+	stuff we do need right now. Also require that the ratio of resources be at least 2:1 in our favor. *)
+let handle_trade_request need our_color turn plist (inters, roads): bool = 
+	let (offer_give, offer_want, their_color) = get_trade_info turn in 
+	let inventory = get_res our_color plist in 
+	let our_vp = get_num_vp our_color plist (inters, roads) in 
+	let their_vp = get_num_vp their_color plist (inters, roads) in 
+	(* If they are a threat, auto-reject their trade. We don't want to help them. *)
+	if (our_vp - their_vp < 2) then false else
+	let leftovers = subtract_res inventory need in 
+ 	let leftovers = normalize leftovers in
+ 	let (bl,wl,ol,gl,ll) = leftovers and (blos, wlos, olos, glos, llos) = offer_want in
+ 	(* If they want resources we need, reject their trade. *)
+ 	if (blos > bl || wlos > wl || olos > ol || glos > gl || llos > ll) then false else
+ 	let needed_unhad = subtract_res need inventory in
+ 	let needed_unhad = normalize needed_unhad in
+ 	let (bn,wn,on,gn,ln) = needed_unhad and (bget, wget, oget, gget, lget) = offer_give in
+ 	let needed_unhad = (bn > 0, wn > 0, on > 0, gn > 0, ln > 0) in 
+ 	let (bn, wn, on, gn, ln) = needed_unhad in 
+ 	(* If we don't get any resources that we need, there's no reason to make the trade. *)
+ 	if not ((bn && bget > 0) || (wn && wget > 0) || (on && oget > 0) || (gn && gget > 0) || (ln && lget > 0)) then false else
+ 	let num_get = sum_cost offer_give and num_lose = sum_cost offer_want in
+ 	let ratio = (num_get / num_lose) in 
+ 	(* If we're not at least getting double the resources we're giving up, it's not worth our time. *)
+ 	if (ratio < 2) then false else
+ 	true
+
 (* Given the resources we have and those we need,
 	try to get some of the ones we need by whatever means
 	are available (sea trade, player trade, playing cards ,etc) *)
-let try_for_res (hexes, ports) (inters, rlist) robberloc needo color plist goal:  strategy =
+let try_for_res (hexes, ports) (inters, rlist) robberloc needo color plist goal trades_made turn:  strategy =
 	let (_, (have, cards), _) = get_player color plist in
 	let cards = match cards with | Hidden _ -> [] | Reveal l -> l in
 	let (b, w, o, g, l) = have in 
@@ -793,6 +1105,16 @@ let try_for_res (hexes, ports) (inters, rlist) robberloc needo color plist goal:
 	if (!potent_road <> (color, (0, 0))) then
 		SBuildRoad (!potent_road) else *)
 
+	(* Check for potential usefulness of player trade. *)
+    let trade_strat = if (turn.tradesmade < cNUM_TRADES_PER_TURN) then
+    	match (suggest_trade needo plist trades_made color (inters, rlist)) with
+    		| Some (tr) -> SOfferTrade tr
+    		| None -> NoStrategy
+    	else NoStrategy in 
+    match trade_strat with
+    	| SOfferTrade tr -> SOfferTrade tr
+    	| _ ->
+
 	(* Check for usefulness of maritime trade. *)
 	let ratio = calc_best_ratio ports inters color in
 	let trade_res = if (b >= bn + ratio) then Some Brick 
@@ -810,4 +1132,6 @@ let try_for_res (hexes, ports) (inters, rlist) robberloc needo color plist goal:
 
 	(* We have tried everything, just give up. *)
 	NoStrategy
+
+
 

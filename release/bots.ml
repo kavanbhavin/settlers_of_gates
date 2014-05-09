@@ -7,3 +7,5 @@ open Hibot_v2
 open Hibot3
 open Hibot4
 open Hibot5
+open Hibot8
+open Hibot9
