@@ -462,11 +462,11 @@ let weight_loc1 settle num board res_owned inters=
      let res_owned' = curlist@res_owned in
      match (resource_of_terrain terrain) with
       | None -> (-1, 1, [], 0)
-      | Some Grain -> ((25/gnum), 1 + (weight_num_owned (Grain, roll) res_owned'), [Grain, roll], 3)
-      | Some Lumber -> ((12/lnum), 1 + (weight_num_owned (Lumber, roll) res_owned'), [Lumber, roll], 2)
-      | Some Brick -> ((13/bnum), 1 + (weight_num_owned (Brick, roll) res_owned'), [Brick, roll], 2)
-      | Some Wool -> ((17/wnum), 1 + (weight_num_owned (Wool, roll) res_owned'), [Wool, roll], 1)
-      | Some Ore -> ((30/onum), 1 + (weight_num_owned (Ore, roll) res_owned'), [Ore, roll], 3) in
+      | Some Grain -> ((100/gnum), 1 + (weight_num_owned (Grain, roll) res_owned'), [Grain, roll], 3)
+      | Some Lumber -> ((50/lnum), 1 + (weight_num_owned (Lumber, roll) res_owned'), [Lumber, roll], 2)
+      | Some Brick -> ((40/bnum), 1 + (weight_num_owned (Brick, roll) res_owned'), [Brick, roll], 2)
+      | Some Wool -> ((30/wnum), 1 + (weight_num_owned (Wool, roll) res_owned'), [Wool, roll], 1)
+      | Some Ore -> ((90/onum), 1 + (weight_num_owned (Ore, roll) res_owned'), [Ore, roll], 3) in
     let acc' = acc' * (expected_of_36 roll import_factor) / div_factor in
     (acc + acc', res@curlist)
   ) with _ -> (acc, curlist)) (0, []) hexes_gained)
@@ -1217,6 +1217,7 @@ let try_for_res (hexes, ports) (inters, rlist) robberloc needo color plist goal 
           DiscardMove (get_discard_res (get_res color plist) !res_needed)
       | TradeRequest -> 
           let response = handle_trade_request !res_needed color turn plist (inters, roads) in 
+          ignore (response);
           TradeResponse(response)
       | ActionRequest -> 
 
