@@ -38,13 +38,13 @@ let do_robber_move (active_player: color) ((piece: piece), color) (structs: stru
 	then try let robber' = piece in 
 			begin match color with  
 				| None -> if any_color_exists_and_has_resource piece structs active_player plist
-							then ((Printf.printf "color exists but didn't try to steal from anyone"); None)
+							then None
 						else Some (robber', plist, RobberMove (robber', None))
 				| Some color_to_rob -> 
 					if not(color_exists piece structs color_to_rob) 
-					then ((Printf.printf "tried to rob %s but no such color exists" (string_of_color color_to_rob)); None)
+					then None
 					else if color_to_rob = active_player
-					then ((Printf.printf "tried to rob himself"); None)
+					then None
 					else let plist' = (List.map (fun (color', (inventory, cards), trophies) ->
 					if color'= color_to_rob
 					then let resources= list_of_resources inventory in
@@ -70,8 +70,8 @@ let do_robber_move (active_player: color) ((piece: piece), color) (structs: stru
 				(color_of_player, (inventory', cards), trophies) 
 					else (color_of_player, (inventory, cards), trophies) ) plist'), RobberMove (robber', color))
 			end 
-		with _ -> ((Printf.printf "list.find failed"); None) 
-	else ((Printf.printf "invalid piece");  None)
+		with _ -> None 
+	else None
 
 let min_valid_robber active_player (intersections, roads) robber plist = 
 let new_location = get_new_piece robber 
@@ -85,7 +85,6 @@ in let random_color_to_rob = pick_random (List.filter (fun color -> color_has_re
 in match do_robber_move active_player (new_location, random_color_to_rob) (intersections, roads) robber plist with 
 		| Some (x) -> Some (x)
 		| None -> 
-	(Printf.printf "Robber moved by %s to %d to rob color: %s" (string_of_color active_player) new_location (string_of_color_option random_color_to_rob));
 	None
 
 

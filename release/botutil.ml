@@ -212,13 +212,10 @@ let get_near_empty ((inters, roads) : structures) (color : color) (first_done : 
 			| None -> acc
 			| Some (col, _) -> if (color <> col) then acc else 
 				(i, 0, [i])::acc) [] settlesi in
-	let () = print_endline ("owned settles: "^(string_of_int (List.length owned_settles))) in
 	let garbage = List.map (fun (i, _, _) -> (i, 0, [])) owned_settles in
 	let (one_away, garbage) = extend_path (inters, roads) owned_settles garbage first_done color in
-	let () = print_endline ("one away: "^(string_of_int (List.length one_away))) in
 	let (two_away, garbage) = extend_path (inters, roads) one_away garbage false color in
 	let two_away = List.filter (fun (i, _, _) -> not (settle_one_away i inters)) two_away in
-	let () = print_endline ("two away: "^(string_of_int (List.length two_away))) in
 	two_away
 
 (* Given the resources we have and those we need, return a list of the ones we need.
@@ -251,7 +248,7 @@ let rec trail_to_move (inters, roads) color goal_loc (trail : int list) : object
 	| start_loc::[] -> OTown goal_loc
 	(* Case: not last leg of journey. Build road if needed, otherwise check next part of journey. *)
 	| start_loc::between_loc::n2 -> begin match (road_status color roads (start_loc, between_loc)) with
-		| NoRoad ->  let () = print_endline ((string_of_int start_loc)^(string_of_int between_loc)) in ORoad (start_loc, between_loc)
+		| NoRoad ->  ORoad (start_loc, between_loc)
 		| Us -> trail_to_move (inters, roads) color goal_loc (between_loc::n2)
 		| Them -> NA
 	end
@@ -274,10 +271,7 @@ let get_init_road ((inters, roads) : structures) res_tiles board color loc : int
 			let valid_options = List.filter (fun (i, _, _) -> i = h) nearby_options in
 			begin match valid_options with
 			  | [] -> choose_move t
-			  | (loc, dis, trail)::_ -> let () = print_endline (string_of_int (List.length trail)) in 
-			  	let () = List.fold_left (fun acc i -> print_endline (string_of_int i)) () trail in 
-			  	trail_to_move (inters, roads) color loc trail
-			  end in
+			  | (loc, dis, trail)::_ ->
 	let obj = choose_move weighted_locs in match obj with
 		| ORoad (p1, p2) -> (p1, p2)
 		| _ -> match (get_valid_road loc (inters, roads) color) with
@@ -379,11 +373,9 @@ let get_init_road ((inters, roads) : structures) res_tiles board color loc : int
 		else list_to_cost ls' in 
 	(* If we can afford to make the discard with just cards not needed for our goal, do it. *)
 	if (num_leftovers >= num_to_discard) then 
-		let () = print_endline ("need discard: "^(string_of_int num_to_discard)) in
 		let sorted_list = List.sort (fun a b -> b - a) (cost_to_list leftovers) in match sorted_list with
 			| h::_ -> let new_hand = choose_from_leftovers (cost_to_list leftovers) h 0 in 
 				let (b,w,o,g,l) = new_hand in
-				let () = print_endline ("temp: "^(string_of_int b)^(string_of_int w)^(string_of_int o)^(string_of_int g)^(string_of_int l)) in
 				subtract_res leftovers new_hand
 			| [] -> (0, 0, 0, 0, 0) (* We have enough in leftovers to discard but it's empty? Should never happen. *)
 	(* If we must discard cards we do need, then discard all the leftovers plus those we do need.
@@ -428,8 +420,8 @@ let town_move ((inters, roads) : structures) res_tiles board (b,w,o,g,l) color :
 			let valid_options = List.filter (fun (i, _, _) -> i = h) nearby_options in
 			begin match valid_options with
 			  | [] -> choose_move t
-			  | (loc, dis, trail)::_ -> let () = print_endline (string_of_int (List.length trail)) in 
-			  	let () = List.fold_left (fun acc i -> print_endline (string_of_int i)) () trail in 
+			  | (loc, dis, trail)::_ ->
+			  	let () = List.fold_left (fun acc i -> 
 			  	trail_to_move (inters, roads) color loc trail
 			  end in
 	choose_move weighted_locs

@@ -82,8 +82,9 @@ module Bot = functor (S : Soul) -> struct
       | DiscardRequest->         
           DiscardMove (get_discard_res (get_res color plist) !res_needed)
       | TradeRequest -> 
-          let response = handle_trade_request !res_needed color turn plist (inters, roads) in 
-          TradeResponse(response)
+          (*let response = handle_trade_request !res_needed color turn plist (inters, roads) in 
+          TradeResponse(response)*)
+          TradeResponse(false)
       | ActionRequest -> 
 
         (if (!goal = NA && !need_card) then goal:=OCard);
